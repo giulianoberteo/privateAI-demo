@@ -8,7 +8,9 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```shell
 ollama pull llama3
 ollama pull nomic-embed-text
-or even better for larger pages
+```
+I ended up switching to a better model for larger pages and documents. The following model replaces nomic-embed-text
+```shell
 ollama pull mxbai-embed-large
 ```
 
