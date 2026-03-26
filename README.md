@@ -4,13 +4,15 @@
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-## Pull the models
+## Pull the models.
+Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required, and also RAM)
 ```shell
 ollama pull llama3
 ollama pull nomic-embed-text
 ```
 I ended up switching to a better model for larger pages and documents. The following model replaces nomic-embed-text
 ```shell
+ollama pull qwen2.5:32b
 ollama pull mxbai-embed-large
 ```
 
