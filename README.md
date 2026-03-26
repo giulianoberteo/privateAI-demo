@@ -35,7 +35,7 @@ uv python pin 3.12
 ```
 
 Update pyproject.toml to specify to use Python 3.12 we just installed, as following:
-```
+```toml
 [project]
 name = "rag"
 version = "0.1.0"
@@ -45,7 +45,7 @@ requires-python = ">=3.12"
 dependencies = []
 ```
 
-Now we can re-run the command to add the VectorDB (chromdb) to the RAG
+Now we can re-run the command to add the chromadb inside the RAG project folder
 ```shell
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
@@ -55,9 +55,9 @@ Alternatively to handle documents with thousands of pages, best to use PyMuPDF (
 uv add pymupdf
 ```
 
-# Step 3: Create the "training" Python ingestion script into Vectors "maps"
-This is required to ingest the document that we want the RAG to index into ChromaDB. My ingestion script look like this
-- ingestData.py file content here
+# Step 3: Create the Python ingestion tinto Vectors "maps"
+This is required to ingest the document that we want the RAG to index into ChromaDB. Each paragraph get assigned a vector "index map"
+See [rag](ingestData.py)
 
 The script uses "Recursive Chunking". By simply dumping a whole 50-page configuration guide into the AI, it will likely "hallucinate" or miss details. By chunking, we turn the documents into a massive searchable map.
 - Chunk Size (1000): We cut the text into 1000-character blocks.
