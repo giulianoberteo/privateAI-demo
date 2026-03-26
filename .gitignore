@@ -1,1 +1,9 @@
-rag/chroma_db
+# Ignore Vector Database
+rag/chroma_db/
+
+# Ignore Python Environments
+.venv/
+__pycache__/
+
+# Ignore raw PDFs (Optional, but recommended if they are 150MB+)
+rag/contentData/
