@@ -29,7 +29,7 @@ source $HOME/.local/bin/env.fish (fish)
 Create the project folder
 ```shell
 mkdir rag
-mv rag
+cv rag
 uv init
 uv python pin 3.12
 ```
@@ -50,12 +50,12 @@ Now we can re-run the command to add the VectorDB (chromdb) to the RAG
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
 ````
-Alternatively to handle PDF with thousands of pages, use pymupdf. To handle a document of this magnitude on your M2 Max without it taking until next week, we need to switch to PyMuPDF (fitz). It is written in C, and it is roughly 20x to 50x faster than pypdf
+Alternatively to handle documents with thousands of pages, best to use PyMuPDF (fitz). It is written in C, and it is roughly 20x to 50x faster than pypdf
 ```shell
 uv add pymupdf
 ```
 
-# Step 3: Create a "training" Python ingestion script
+# Step 3: Create the "training" Python ingestion script into Vectors "maps"
 This is required to ingest the document that we want the RAG to index into ChromaDB. My ingestion script look like this
 - ingestData.py file content here
 
