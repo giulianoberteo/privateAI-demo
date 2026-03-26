@@ -7,3 +7,7 @@ __pycache__/
 
 # Ignore raw PDFs (Optional, but recommended if they are 150MB+)
 rag/contentData/
+
+# Ignore MacOS system files
+.DS_Store
+**/.DS_Store
