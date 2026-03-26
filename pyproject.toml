@@ -1,0 +1,15 @@
+[project]
+name = "rag"
+version = "0.1.0"
+description = "Giuliano Bertello Private AI RAG Demo"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=1.5.5",
+    "fastmcp>=3.1.1",
+    "langchain-text-splitters>=1.1.1",
+    "ollama>=0.6.1",
+    "pymupdf>=1.27.2.2",
+    "pypdf>=6.9.2",
+    "tqdm>=4.67.3",
+]
