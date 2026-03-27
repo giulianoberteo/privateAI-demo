@@ -52,7 +52,7 @@ uv add pymupdf
 ```
 
 # Step 3: Python ingestion script / Building the Vector DB
-Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get assigned a vector "index map".
+Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get processed into chromadb and assigned a vector "index map".
 See [ingestData.py](rag/ingestData.py)
 
 Adding a progress bar (tqdm) and run the ingestion script, from inside the rag folder:
@@ -61,7 +61,9 @@ uv add tqdm
 uv run ingestData.py
 ```
 # Step 4: Create the MCP server (FastMCP)
-The server.py file is the heart of this project, functioning as a Model Context Protocol (MCP) server. It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
+The server.py file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
+It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
+
 Semantic Documentation Search (RAG):
 Exposes the **search_vcf_documentation** tool, which performs Retrieval-Augmented Generation. It uses ChromaDB and the mxbai-embed-large model to search through 8,000+ pages of VCF 9 documentation. Instead of simple keyword matching, it finds information based on technical intent and meaning.
 
