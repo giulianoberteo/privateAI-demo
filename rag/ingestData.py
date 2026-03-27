@@ -6,6 +6,22 @@ from chromadb.utils import embedding_functions # pyright: ignore[reportMissingIm
 from langchain_text_splitters import RecursiveCharacterTextSplitter # pyright: ignore[reportMissingImports]
 from tqdm import tqdm # pyright: ignore[reportMissingModuleSource]
 
+'''
+This script ingests all the PDS inside a folder (in my case VCF9 documenation) into a ChromaDB vector store for RAG applications in your MCP project.
+
+It uses PyMuPDF for extraction, mxbai-embed-large via Ollama for embeddings, and recursive text splitting with batching for efficient processing.
+
+Key Features
+- Processes all PDFs in ./contentData/ with progress tracking via tqdm.
+- Splits pages into 800-character chunks (100 overlap) to optimize for embedding limits.
+- Batches additions (20 chunks max) to prevent memory issues, with robust error handling.
+
+Prerequisites
+- Ollama running locally (ollama pull mxbai-embed-large).
+- ChromaDB at ./chroma_db/ and PyMuPDF/Chroma installed.
+
+'''
+
 # Configure the connection to Chroma DB and the model to use
 client = chromadb.PersistentClient(path="./chroma_db")
 emb_fn = embedding_functions.OllamaEmbeddingFunction(
