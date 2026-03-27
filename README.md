@@ -45,8 +45,11 @@ Run the command to add the chromadb inside the RAG project folder
 ```shell
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
-````
-Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF. Written in C, it performs 20x to 50x faster than pypdf.
+```
+
+Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF.
+Written in C, it performs 20x to 50x faster than pypdf.
+
 ```shell
 uv add pymupdf
 ```
