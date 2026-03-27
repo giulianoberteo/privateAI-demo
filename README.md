@@ -153,7 +153,7 @@ ollama pull bge-m3
 
 Wipe the old index: (Since embeddings are model-specific).
 ```bash
-rm -rf /Users/gb003139/local-code-repo/privateAI-demo/rag/chroma_db
+rm -rf /Users/giuliano/local-code-repo/privateAI-demo/rag/chroma_db
 ```
 
 Update the Code. In both ingestData.py and server.py, change the model_name in your embedding function:
