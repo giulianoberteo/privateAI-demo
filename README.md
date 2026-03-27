@@ -36,17 +36,8 @@ uv init
 uv python pin 3.12
 ```
 
-Update pyproject.toml to specify to use Python 3.12 we just installed, as following:
+Update pyproject.toml to specify to use Python 3.12 we just installed, as following: [pyproject.toml](pyproject.toml)
 
-```toml
-[project]
-name = "rag"
-version = "0.1.0"
-description = "Giuliano Bertello Private AI RAG Demo"
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
-```
 
 Now we can run the command to add the chromadb inside the RAG project folder
 ```shell
