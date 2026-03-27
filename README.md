@@ -116,7 +116,15 @@ Screenshots here for reference:
 
 Prompt: **List all design decisions that relate to stretch clustering in the VCF fleet with multiple sites across multiple regions blueprint**
 
-![Alt text](/screeshots/claude-prompt-1.png?raw=true "Claude Prompt 1")
+![claude-prompt-1](screenshots/claude-prompt-1.png "Claude Prompt 1")
+
+Prompt: **Provide me with the source references that you used to answer the design decisions that relate to stretch clustering in the VCF fleet with multiple sites across multiple regions blueprint**
+
+![claude-prompt-2-references](screenshots/claude-prompt-2-references.png "Claude Prompt 2 - References")
+
+Prompt: **are you getting this information from the internet ?**
+
+![claude-prompt-3-references](screenshots/claude-prompt-3-references.png "Claude Prompt 3 - Sources")
 
 # Part N: consider indexing using a different model
 The "Pro" Alternative: bge-m3
