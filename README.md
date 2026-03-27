@@ -1,5 +1,8 @@
 <span style="font-size: 14px;"><u>Please note</u>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary, and I am not affiliated with any of the companies mentioned in this demo.
 </span>
+
+### WORK IN PROGRESS - README DRAFT - VERSION 0.1
+
 # Step 1: Prepare the engine
 ## Install Ollama
 ```shell
@@ -7,12 +10,12 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 ## Pull the models
-Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required and RAM)
+Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required and RAM).
 ```shell
 ollama pull llama3
 ollama pull nomic-embed-text
 ```
-I ended up switching to a better model for larger pages and documents. The following model replaces nomic-embed-text
+I ended up switching to a better model for larger pages and documents. The following model replaces nomic-embed-text. It is more accurate for technical retrieval, and has a larger context window (4k tokens vs 2k tokens for nomic-embed-text). The tradeoff is that it is slightly larger in size (1.5GB vs 1GB for nomic-embed-text).
 ```shell
 ollama pull qwen2.5:32b
 ollama pull mxbai-embed-large
@@ -23,12 +26,12 @@ ollama pull mxbai-embed-large
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-Restart the shell session, or alternatively run
+Restart the shell session, or alternatively run:
 ```shell
 source $HOME/.local/bin/env (sh, bash, zsh)
 source $HOME/.local/bin/env.fish (fish) 
 ```
-Create the project folder
+Create the project folder.
 ```shell
 mkdir rag
 cd rag
@@ -36,15 +39,14 @@ uv init
 uv python pin 3.12
 ```
 
-Update pyproject.toml to specify to use Python 3.12 we just installed, as following: [pyproject.toml](pyproject.toml)
+Update the pyproject.toml to specify Python 3.12 we just installed [pyproject.toml](pyproject.toml)
 
-
-Now we can run the command to add the chromadb inside the RAG project folder
+Run the command to add the chromadb inside the RAG project folder
 ```shell
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
 ````
-Alternatively to handle documents with thousands of pages, best to use PyMuPDF (fitz). It is written in C, and it is roughly 20x to 50x faster than pypdf
+Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF. Written in C, it performs 20x to 50x faster than pypdf.
 ```shell
 uv add pymupdf
 ```
