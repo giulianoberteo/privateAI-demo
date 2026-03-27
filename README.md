@@ -1,5 +1,9 @@
 # Disclaimer
-I'm not an expert in AI, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo. This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. Also, I'm using a MacBook Pro M2 Max with only 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
+I'm not an expert in AI, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo.
+
+This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. 
+
+Additionally I'm using a MacBook Pro M2 Max with only 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
 
 
 # Part 1: Prepare the engine
