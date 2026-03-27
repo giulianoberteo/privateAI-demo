@@ -1,10 +1,12 @@
+<span style="font-size: 14px"><span style="text-decoration: underline;"><mark>Please note</mark></span>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary, and I am not affiliated with any of the companies mentioned in this demo.
+</span>
 # Step 1: Prepare the engine
 ## Install Ollama
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-## Pull the models.
+## Pull the models
 Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required, and also RAM)
 ```shell
 ollama pull llama3
