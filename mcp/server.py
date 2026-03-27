@@ -1,7 +1,29 @@
-import httpx
-import chromadb
-from fastmcp import FastMCP
-from chromadb.utils import embedding_functions
+"""
+VCF 9 Assistant: Local MCP Server for Documentation RAG & Lab Operations.
+
+This server acts as a bridge between Large Language Models (LLMs) 
+and local VCF9 documentation. 
+
+CORE CAPABILITIES:
+1. Retrieval Augmented Generation (RAG): 
+   Performs semantic vector searches across an 8,000+ page VCF 9 technical 
+   library stored in a local ChromaDB instance. Uses the 'mxbai-embed-large' 
+   model via Ollama for high-precision technical query matching.
+
+2. Live Infrastructure Monitoring (WIP): - !!! work in progress, need to develop further this section !!!
+   Integrates with VCF Operations (Aria Ops) via REST API to pull real-time 
+   critical alerts and system health status directly into the chat context.
+
+INFRASTRUCTURE:
+- Framework: FastMCP (Model Context Protocol)
+- Database: ChromaDB (Local Persistent Client)
+- Embeddings: Ollama API (Local)
+"""
+
+import httpx # pyright: ignore[reportMissingImports]
+import chromadb # pyright: ignore[reportMissingImports]
+from fastmcp import FastMCP # pyright: ignore[reportMissingImports]
+from chromadb.utils import embedding_functions # pyright: ignore[reportMissingImports]
 from pathlib import Path
 
 # 1. Initialize the MCP Server
@@ -12,7 +34,7 @@ mcp = FastMCP("VCF9-Assistant")
 BASE_DIR = Path(__file__).parent.parent
 DB_PATH = BASE_DIR / "rag" / "chroma_db"
 
-# 3. Connect to your existing database
+# 3. Connect to the existing ChromaDB database
 client = chromadb.PersistentClient(path=str(DB_PATH))
 emb_fn = embedding_functions.OllamaEmbeddingFunction(
     model_name="mxbai-embed-large",
@@ -37,7 +59,7 @@ def search_vcf_documentation(query: str) -> str:
         
     return "\n\n---\n\n".join(output)
 
-# --- TOOL 2: THE ACTION (VCF9 API) ---
+# --- TOOL 2: THE ACTION (VCF9 API) --- not working at the moment - work in progress, need to develop further this section
 @mcp.tool()
 async def get_lab_alerts(severity: str = "CRITICAL") -> str:
     """Fetch live alerts directly from the VCF9 Operations lab."""
