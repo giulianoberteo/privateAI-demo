@@ -22,7 +22,7 @@ ollama pull mxbai-embed-large
 ```
 
 # Part 2: Setup the project
-## Install uv (fast Python manager)
+Install uv (fast Python manager)
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
