@@ -61,7 +61,7 @@ uv add tqdm
 uv run ingestData.py
 ```
 # Step 4: Create the MCP server (FastMCP)
-The **server.py**file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
+The **server.py** file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
 It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
 
 Semantic Documentation Search (RAG):
