@@ -137,11 +137,11 @@ It could be that standard 800-character chunks are too granular — causing the 
 
 Currently, BGE-M3 is the industry-standard choice for local RAG on Apple Silicon for the following reasons:
 
-- Native 8,192 Context Window: Unlike smaller models that struggle with long-form data, BGE-M3 natively supports an 8k token window. This allows you to ingest much larger "logical" chunks of the VCF docs, ensuring the AI sees entire procedures (like an SDDC Manager upgrade) in a single glance.
+- Native 8,192 Context Window: Unlike smaller models that struggle with long-form data, BGE-M3 natively supports an 8k token window. This allows the ingestions of much larger "logical" chunks of documents, ensuring the AI sees entire procedures (like an SDDC Manager upgrade) in a single glance.
 
-- Hybrid Retrieval (Dense + Sparse): This is its superpower. It doesn't just look for "meaning" (Dense); it also performs "Sparse" retrieval, which acts like a traditional index to catch specific VCF part numbers, error codes, and unique technical terms that other models might overlook.
+- Hybrid Retrieval (Dense + Sparse): This is its superpower. It doesn't just look for "meaning" (Dense); it also performs "Sparse" retrieval, which acts like a traditional index to catch specific part numbers, error codes, and unique technical terms that other models might overlook.
 
-Bu- ilt for Encyclopedias: Specifically optimized for massive, cross-referenced technical libraries, it consistently outperforms mxbai in "Recall" (i.e. the ability to actually find the one correct page out of 8,000+ pages).
+- Built for Encyclopedias: Specifically optimized for massive, cross-referenced technical libraries, it consistently outperforms mxbai in "Recall" (i.e. the ability to actually find the one correct page out of 8,000+ pages).
 
 ## How to Switch to BGE-M3:
 
