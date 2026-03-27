@@ -1,7 +1,6 @@
-<span style="font-size: 14px;"><u>Please note</u>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary.
-</span>
+# Disclaimer
+I'm not an expert in AI, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo. This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. Also, I'm using a MacBook Pro M2 Max with only 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
 
-## WORK IN PROGRESS - DRAFT
 
 # Part 1: Prepare the engine
 ## Install Ollama
@@ -48,6 +47,7 @@ uv add pypdf langchain-text-splitters
 ```
 
 Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF.
+
 Written in C, it performs 20x to 50x faster than pypdf.
 
 ```shell
@@ -129,21 +129,35 @@ Prompt: **are you getting this information from the internet ?**
 
 ![claude-prompt-3-references](screenshots/claude-prompt-3-sources.png "Claude Prompt 3 - Sources")
 
-# Part N: consider indexing using a different model
-The "Pro" Alternative: bge-m3
-If you find that 800-character chunks are too small (meaning the AI loses the "big picture" of a configuration step), you should switch to bge-m3.
+# Considerations and Next Steps
 
-In 2026, bge-m3 is the gold standard for your M2 Max because:
+Fine-tuning the how to ingest data and what model to use is always the most critical part of any RAG project.
 
-Massive Context: It has an 8,192 token limit (like Nomic). You won't get "400 Bad Request" errors ever again.
+It could be that find that standard 800-character chunks are too granular—causing the AI to lose the high-level context of complex multi-step configurations—you should upgrade your embedding engine to BGE-M3.
 
-High Accuracy: It matches or beats mxbai in technical retrieval.
+As of 2026, BGE-M3 is the industry-standard choice for local RAG on Apple Silicon for three key reasons:
 
-Multi-Function: It is designed specifically for "Dense" retrieval like your VCF encyclopedia.
+- Native 8,192 Context Window: Unlike smaller models that struggle with long-form data, BGE-M3 natively supports an 8k token window. This allows you to ingest much larger "logical" chunks of the VCF docs, ensuring the AI sees entire procedures (like an SDDC Manager upgrade) in a single glance.
 
-How to switch to BGE-M3:
-Pull the model: ollama pull bge-m3
+- Hybrid Retrieval (Dense + Sparse): This is its superpower. It doesn't just look for "meaning" (Dense); it also performs "Sparse" retrieval, which acts like a traditional index to catch specific VCF part numbers, error codes, and unique technical terms that other models might overlook.
 
-Delete the DB: rm -rf chroma_db
+Bu- ilt for Encyclopedias: Specifically optimized for massive, cross-referenced technical libraries, it consistently outperforms mxbai in "Recall" (i.e. the ability to actually find the one correct page out of 8,000+ pages).
 
-Update ingestData.py and server.py:
+## How to Switch to BGE-M3:
+
+Pull the new engine:
+
+```bash
+ollama pull bge-m3
+```
+
+Wipe the old index: (Since embeddings are model-specific).
+```bash
+rm -rf /Users/gb003139/local-code-repo/privateAI-demo/rag/chroma_db
+```
+
+Update the Code. In both ingestData.py and server.py, change the model_name in your embedding function:
+
+```python
+model_name="bge-m3"
+```
