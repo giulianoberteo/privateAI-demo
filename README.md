@@ -29,12 +29,13 @@ source $HOME/.local/bin/env.fish (fish)
 Create the project folder
 ```shell
 mkdir rag
-cv rag
+cd rag
 uv init
 uv python pin 3.12
 ```
 
 Update pyproject.toml to specify to use Python 3.12 we just installed, as following:
+
 ```toml
 [project]
 name = "rag"
@@ -57,7 +58,7 @@ uv add pymupdf
 
 # Step 3: Create the Python ingestion tinto Vectors "maps"
 This is required to ingest the document that we want the RAG to index into ChromaDB. Each paragraph get assigned a vector "index map"
-See [rag](ingestData.py)
+[See Script](rag/ingestData.py)
 
 The script uses "Recursive Chunking". By simply dumping a whole 50-page configuration guide into the AI, it will likely "hallucinate" or miss details. By chunking, we turn the documents into a massive searchable map.
 - Chunk Size (1000): We cut the text into 1000-character blocks.
