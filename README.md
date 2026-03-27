@@ -133,9 +133,9 @@ Prompt: **are you getting this information from the internet ?**
 
 Fine-tuning how to ingest data and what model to use is always the most critical part of any RAG project.
 
-It could be that standard 800-character chunks are too granular—causing the AI to lose the high-level context of complex multi-step configurations—you should upgrade your embedding engine to BGE-M3.
+It could be that standard 800-character chunks are too granular — causing the AI to lose the high-level context of complex multi-step configurations. In such case, upgrade your embedding engine to BGE-M3.
 
-As of 2026, BGE-M3 is the industry-standard choice for local RAG on Apple Silicon for the following reasons:
+Currently, BGE-M3 is the industry-standard choice for local RAG on Apple Silicon for the following reasons:
 
 - Native 8,192 Context Window: Unlike smaller models that struggle with long-form data, BGE-M3 natively supports an 8k token window. This allows you to ingest much larger "logical" chunks of the VCF docs, ensuring the AI sees entire procedures (like an SDDC Manager upgrade) in a single glance.
 
