@@ -109,6 +109,15 @@ Customise the specs as following, using your own paths.
   }
 }
 ```
+# Part 6: Test the RAG in Claude Desktop
+Open Claude Desktop, and ask questions about VCF 9 documentation. You should see the RAG tool "docs" being called, and the relevant documentation snippets being returned as part of the answer. Additionally, you can also request the source refereces that the RAG is using to answer, and you should see the relevant page numbers and sections of the documentation being returned.
+
+Screenshots here for reference:
+
+Prompt: **List all design decisions that relate to stretch clustering in the VCF fleet with multiple sites across multiple regions blueprint**
+
+![Alt text](/screeshots/claude-prompt-1.png?raw=true "Claude Prompt 1")
+
 # Part N: consider indexing using a different model
 The "Pro" Alternative: bge-m3
 If you find that 800-character chunks are too small (meaning the AI loses the "big picture" of a configuration step), you should switch to bge-m3.
