@@ -1,23 +1,22 @@
 """
 VCF 9 Assistant: Local MCP Server for Documentation RAG & Lab Operations.
 
-This server acts as a bridge between Large Language Models (LLMs) 
-and local VCF9 documentation. 
+This server acts as a bridge between Large Language Models (LLMs) and local VCF9 documentation. 
 
 CORE CAPABILITIES:
 1. Retrieval Augmented Generation (RAG): 
-   Performs semantic vector searches across an 8,000+ page VCF 9 technical 
-   library stored in a local ChromaDB instance. Uses the 'mxbai-embed-large' 
-   model via Ollama for high-precision technical query matching.
+   Performs semantic vector searches across an 8,000+ page VCF 9 technical library stored in a local ChromaDB instance.
+   Uses the 'mxbai-embed-large'  model via Ollama for high-precision technical query matching.
 
-2. Live Infrastructure Monitoring (WIP): - !!! work in progress, need to develop further this section !!!
-   Integrates with VCF Operations (Aria Ops) via REST API to pull real-time 
-   critical alerts and system health status directly into the chat context.
+!!! CURRRENTLY NOT IMPLEMENTED - WORK IN PROGRESS !!!
+2. Live Infrastructure Monitoring
+   Integrates with VCF Operations (Aria Ops) via REST API to pull real-time critical alerts and system health status directly into the chat context.
 
 INFRASTRUCTURE:
 - Framework: FastMCP (Model Context Protocol)
 - Database: ChromaDB (Local Persistent Client)
 - Embeddings: Ollama API (Local)
+
 """
 
 import httpx # pyright: ignore[reportMissingImports]
