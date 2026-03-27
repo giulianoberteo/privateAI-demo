@@ -61,7 +61,7 @@ uv add tqdm
 uv run ingestData.py
 ```
 # Step 4: Create the MCP server (FastMCP)
-The server.py file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
+The **server.py**file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
 It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
 
 Semantic Documentation Search (RAG):
@@ -70,7 +70,7 @@ Exposes the **search_vcf_documentation** tool, which performs Retrieval-Augmente
 Live Lab Insights (WIP):
 Exposes the **get_lab_alerts** tool, designed to interface directly with the VCF Operations (Aria Ops) API. This allows the AI to fetch real-time critical alerts and health status from a live environment, moving beyond static documentation into active monitoring.
 
-See [server.py](mcp/server.pypy)
+See [server.py](mcp/server.py)
 
 # Step 5: download and install Claude Desktop
 ```shell
