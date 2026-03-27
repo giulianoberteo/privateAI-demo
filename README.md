@@ -51,7 +51,7 @@ Alternatively, for better documents handling when there's thousands of pages, it
 uv add pymupdf
 ```
 
-# Step 3: Create the Python ingestion tinto Vectors "maps"
+# Step 3: Python ingestion script / Building the Vector DB
 Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get assigned a vector "index map".
 See [ingestData.py](rag/ingestData.py)
 
