@@ -91,7 +91,7 @@ Customise the specs as following, using your own paths.
 {
   "mcpServers": {
     "docs": {
-      "command": "/Users/gb003139/.local/bin/uv",
+      "command": "/Users/giuliano/.local/bin/uv",
       "args": [
         "--directory",
         "/Users/giuliano/local-code-repo/privateAI-demo/rag",
