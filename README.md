@@ -82,6 +82,7 @@ brew install --cask claude
 Extract the path to the rag and mcp scripts. In my case
 
 /Users/giuliano/local-code-repo/privateAI-demo/rag
+
 /Users/giuliano/local-code-repo/privateAI-demo/mcp
 
 Open Claude Desktop's configuration file ~/Library/Application Support/Claude/claude_desktop_config.json.
