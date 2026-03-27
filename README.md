@@ -124,7 +124,7 @@ Prompt: **Provide me with the source references that you used to answer the desi
 
 Prompt: **are you getting this information from the internet ?**
 
-![claude-prompt-3-references](screenshots/claude-prompt-3-references.png "Claude Prompt 3 - Sources")
+![claude-prompt-3-references](screenshots/claude-prompt-3-sources.png "Claude Prompt 3 - Sources")
 
 # Part N: consider indexing using a different model
 The "Pro" Alternative: bge-m3
