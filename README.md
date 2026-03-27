@@ -3,7 +3,7 @@
 
 ## WORK IN PROGRESS - DRAFT
 
-# Step 1: Prepare the engine
+# Part 1: Prepare the engine
 ## Install Ollama
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
@@ -21,7 +21,7 @@ ollama pull qwen2.5:32b
 ollama pull mxbai-embed-large
 ```
 
-# Step 2: Setup the project
+# Part 2: Setup the project
 ## Install uv (fast Python manager)
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -51,7 +51,7 @@ Alternatively, for better documents handling when there's thousands of pages, it
 uv add pymupdf
 ```
 
-# Step 3: Python ingestion script / Building the Vector DB
+# Part 3: Python ingestion script / Building the Vector DB
 Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get processed into chromadb and assigned a vector "index map".
 See [ingestData.py](rag/ingestData.py)
 
@@ -60,7 +60,7 @@ Adding a progress bar (tqdm) and run the ingestion script, from inside the rag f
 uv add tqdm
 uv run ingestData.py
 ```
-# Step 4: Create the MCP server (FastMCP)
+# Part 4: Create the MCP server (FastMCP)
 The **server.py** file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
 It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
 
@@ -74,7 +74,7 @@ Exposes the **get_lab_alerts** tool, designed to interface directly with the VCF
 
 See [server.py](mcp/server.py)
 
-# Step 5: download and install Claude Desktop
+# Part 5: download and install Claude Desktop
 ```shell
 brew install --cask claude
 ```
@@ -103,7 +103,7 @@ Open Claude Desktop's configuration file. You can usually do this from the Claud
   }
 }
 ```
-# Step N: consider indexing using a different model
+# Part N: consider indexing using a different model
 The "Pro" Alternative: bge-m3
 If you find that 800-character chunks are too small (meaning the AI loses the "big picture" of a configuration step), you should switch to bge-m3.
 
