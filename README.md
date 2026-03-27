@@ -52,13 +52,10 @@ uv add pymupdf
 ```
 
 # Step 3: Create the Python ingestion tinto Vectors "maps"
-This is required to ingest the document that we want the RAG to index into ChromaDB. Each paragraph get assigned a vector "index map". [ingestData.py](rag/ingestData.py)
+Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get assigned a vector "index map".
+See [ingestData.py](rag/ingestData.py)
 
-The script uses "Recursive Chunking". By simply dumping a whole 50-page configuration guide into the AI, it will likely "hallucinate" or miss details. By chunking, we turn the documents into a massive searchable map.
-- Chunk Size (1000): We cut the text into 1000-character blocks.
-- Overlap (100): We keep 100 characters from the previous block at the start of the next one. This ensures that if a sentence like "To configure the VCF9 license, click here" gets cut in half, the context exists in both chunks.
-
-add a progress bar and run once the ingestion script
+Adding a progress bar (tqdm) and run the ingestion script
 ```shell
 uv add tqdm
 uv run ingestData.py
