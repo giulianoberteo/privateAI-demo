@@ -79,27 +79,32 @@ See [server.py](mcp/server.py)
 brew install --cask claude
 ```
 ## Configure Claude Desktop to point to the local RAG
-Open your terminal and find your exact folder path by typing: pwd (Copy this path).
+Extract the path to the rag and mcp scripts. In my case
+/Users/giuliano/local-code-repo/privateAI-demo/rag
 
-Open Claude Desktop's configuration file. You can usually do this from the Claude menu bar: Claude > Settings > Developer > Edit Config, or by opening ~/Library/Application Support/Claude/claude_desktop_config.json.
+/Users/giuliano/local-code-repo/privateAI-demo/mcp
 
+Open Claude Desktop's configuration file ~/Library/Application Support/Claude/claude_desktop_config.json.
+
+Customise the specs as following, using your own paths.
 ```json
 {
-  "preferences": {
-    "coworkWebSearchEnabled": true,
-    "ccdScheduledTasksEnabled": false,
-    "coworkScheduledTasksEnabled": false
-  },
   "mcpServers": {
     "docs": {
       "command": "/Users/gb003139/.local/bin/uv",
       "args": [
         "--directory",
-        "/Users/gb003139/SynologyDrive/DropBox/code/privateAI-demo/rag",
+        "/Users/giuliano/local-code-repo/privateAI-demo/rag",
         "run",
-        "server.py"
+        "/Users/giuliano/local-code-repo/privateAI-demo/mcp/server.py"
       ]
     }
+  },
+  "preferences": {
+    "coworkScheduledTasksEnabled": false,
+    "ccdScheduledTasksEnabled": false,
+    "coworkWebSearchEnabled": true,
+    "sidebarMode": "chat"
   }
 }
 ```
