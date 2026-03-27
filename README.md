@@ -7,7 +7,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 ## Pull the models
-Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required, and also RAM)
+Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required and RAM)
 ```shell
 ollama pull llama3
 ollama pull nomic-embed-text
@@ -48,7 +48,7 @@ requires-python = ">=3.12"
 dependencies = []
 ```
 
-Now we can re-run the command to add the chromadb inside the RAG project folder
+Now we can run the command to add the chromadb inside the RAG project folder
 ```shell
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
