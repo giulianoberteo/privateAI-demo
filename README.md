@@ -1,7 +1,7 @@
 <span style="font-size: 14px;"><u>Please note</u>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary, and I am not affiliated with any of the companies mentioned in this demo.
 </span>
 
-### WORK IN PROGRESS - README DRAFT - VERSION 0.1
+## WORK IN PROGRESS - DRAFT
 
 # Step 1: Prepare the engine
 ## Install Ollama
@@ -55,13 +55,20 @@ uv add pymupdf
 Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get assigned a vector "index map".
 See [ingestData.py](rag/ingestData.py)
 
-Adding a progress bar (tqdm) and run the ingestion script
+Adding a progress bar (tqdm) and run the ingestion script, from inside the rag folder:
 ```shell
 uv add tqdm
 uv run ingestData.py
 ```
 # Step 4: Create the MCP server (FastMCP)
-server.py content here
+The server.py file is the heart of this project, functioning as a Model Context Protocol (MCP) server. It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
+Semantic Documentation Search (RAG):
+Exposes the **search_vcf_documentation** tool, which performs Retrieval-Augmented Generation. It uses ChromaDB and the mxbai-embed-large model to search through 8,000+ pages of VCF 9 documentation. Instead of simple keyword matching, it finds information based on technical intent and meaning.
+
+Live Lab Insights (WIP):
+Exposes the **get_lab_alerts** tool, designed to interface directly with the VCF Operations (Aria Ops) API. This allows the AI to fetch real-time critical alerts and health status from a live environment, moving beyond static documentation into active monitoring.
+
+See [server.py](mcp/server.pypy)
 
 # Step 5: download and install Claude Desktop
 ```shell
