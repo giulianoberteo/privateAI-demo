@@ -1,4 +1,4 @@
-<span style="font-size: 14px;"><u>Please note</u>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary, and I am not affiliated with any of the companies mentioned in this demo.
+<span style="font-size: 14px;"><u>Please note</u>: This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary.
 </span>
 
 ## WORK IN PROGRESS - DRAFT
