@@ -1,4 +1,8 @@
 """
+v1.0 
+
+This version does not have a "smart ingestion" meaninig it can't handle different document types.
+
 This script ingests all the PDS inside a folder (in my case VCF9 documenation) into a ChromaDB vector store for RAG applications in your MCP project.
 
 It uses PyMuPDF for extraction, mxbai-embed-large via Ollama for embeddings, and recursive text splitting with batching for efficient processing.
