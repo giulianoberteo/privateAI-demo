@@ -1,3 +1,11 @@
+"""
+v1.0    
+
+Just a test search function to perform samply ChromaDB queries against indexed data.
+
+Does not have reasoning.
+
+"""
 import chromadb
 import argparse
 from chromadb.utils import embedding_functions
