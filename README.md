@@ -169,3 +169,36 @@ There are two different models working together here:
 - The Brain (LLM): qwen3.5:35b-a3b (This handles the talking).
 
 - The Librarian (Embeddings): bge-m3 (This handles the searching).
+
+## How does it all work together?
+
+### 1) The "Brain" (Reasoning): Qwen 3.5
+The Qwen 3.5 (35B-A3B) model is the one doing the actual thinking.
+- Receives the "Context" (the snippets found in the PDFs). 
+- Reads your "Prompt"
+- Uses its Mixture of Experts (MoE) architecture to decide which part of its brain is best suited to answer your VCF question.
+- Synthesizes the final response, ensuring it follows your instructions (e.g., "Be a VCF Architect").
+
+### 2) The "Engine Room" (Execution): my M2 Max GPU
+Even though Qwen is the "software," my local M2 Max’s GPU and Unified Memory are doing the physical work. When you see the text streaming in the UI, that is your Mac's Neural Engine and GPU cores calculating the probability of every single word in real-time.
+
+In my case, I have a MacBook Pro M2 Max, which has high memory bandwidth, which is why a 35B model can "reason" relatively quickly. 
+
+### 3) The "Librarian" (Retrieval): BGE-M3 + ChromaDB
+
+Before Qwen even starts thinking, server.py script performs a Local Vector Search (read the collection)
+
+- My Mac uses the BGE-M3 model to turn the question into numbers.
+- It scans your ChromaDB (on your SSD) to find the right pages.
+- This happens in milliseconds and stays entirely on your machine.
+
+### Why this is different from Claude/ChatGPT:
+With Claude Desktop: the data is sent to Anthropic’s servers; their massive GPU clusters do the reasoning.
+
+Using my streamlit demo app, the data never leaves your RAM. If you turned off the Wi-Fi right now, the reasoning would still work perfectly.
+
+### Summary of the Workflow:
+- Streamlit (ui-app.py) coordinates the whole thing.
+- BGE-M3 finds the data in ChromaDB.
+- Qwen 3.5 processes the reasoning.
+- M2 Max GPU provides the raw power.
