@@ -29,8 +29,8 @@ from pathlib import Path
 mcp = FastMCP("VCF9-Assistant")
 
 # 2. Navigate up from /mcp, then down into /rag/chroma_db
-# __file__ is server.py. parent is /mcp. parent.parent is /privateAI-demo.
-BASE_DIR = Path(__file__).parent.parent
+# .parents[1] is privateAI-demo/
+BASE_DIR = Path(__file__).resolve().parents[1]
 DB_PATH = BASE_DIR / "rag" / "chroma_db"
 
 # 3. Connect to the existing ChromaDB database

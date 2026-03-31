@@ -11,3 +11,4 @@ rag/contentData/
 # Ignore MacOS system files
 .DS_Store
 **/.DS_Store
+ui/rag/chroma_db/chroma.sqlite3
