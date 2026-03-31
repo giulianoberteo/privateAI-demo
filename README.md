@@ -163,3 +163,9 @@ Update the Code. In both ingestData.py and server.py, change the model_name in y
 ```python
 model_name="bge-m3"
 ```
+
+There are two different models working together here:
+
+- The Brain (LLM): qwen3.5:35b-a3b (This handles the talking).
+
+- The Librarian (Embeddings): bge-m3 (This handles the searching).
