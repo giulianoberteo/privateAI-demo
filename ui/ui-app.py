@@ -40,7 +40,7 @@ collection = init_db()
 # --- 3. THE RAG ENGINE ---
 def get_vcf_context(query):
     instructional_query = f"Represent this sentence for searching relevant passages: {query}"
-    results = collection.query(query_texts=[instructional_query], n_results=10)
+    results = collection.query(query_texts=[instructional_query], n_results=25)
     
     context_text = ""
     sources = []
