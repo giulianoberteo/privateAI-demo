@@ -1,10 +1,11 @@
 # Disclaimer
-I'm not an expert in AI, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo.
+I'm not an expert in Artificial Intelligence, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo.
 
-This is just my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. 
+This article is my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. 
 
-Additionally I'm using a MacBook Pro M2 Max with only 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
+My machine is a MacBook Pro M2 Max with 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
 
+All commands and code snippets in this article are based on running on Apple Silicon (M1/M2) with macOS. If you're using a different operating system or architecture, you may need to adjust the commands and configurations accordingly.
 
 # Part 1: Prepare the engine
 ## Install Ollama
@@ -42,18 +43,18 @@ uv init
 uv python pin 3.12
 ```
 
-Update the pyproject.toml to specify Python 3.12 we just installed [pyproject.toml](pyproject.toml)
+Update the pyproject.toml to specify Python 3.12 we just installed [pyproject.toml](pyproject.toml).
 
-Run the command to add the chromadb inside the RAG project folder
+We now have two options to handle the documents and the vector database. We can either use pypdf(*1) or we can use pymupdf, which is faster for larger documents. For this demo, I ended up switching to pymupdf(**2) cause I noticed it was faster, but you can start with pypdf and chromadb if you want to keep it simple.
+
+Add fastmcp, chromadb, ollama, pypdf and langchain-text-splitters to the project.
 ```shell
 uv add fastmcp chromadb ollama
 uv add pypdf langchain-text-splitters
 ```
 
-Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF.
-
-Written in C, it performs 20x to 50x faster than pypdf.
-
+Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF. Written in C, it performs 20x to 50x faster than pypdf.
+(**2)
 ```shell
 uv add pymupdf
 ```
