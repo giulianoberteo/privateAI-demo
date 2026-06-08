@@ -5,7 +5,7 @@ This article is my personal learning experience setting up some local RAG & MCP 
 
 My machine is a MacBook Pro M2 Max with 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
 
-All commands and code snippets in this article are based on running on Apple Silicon (M1/M2) with macOS. If you're using a different operating system or architecture, you may need to adjust the commands and configurations accordingly.
+All commands and code snippets in this article are based on running on Apple Silicon with macOS. If you're using a different operating system or architecture, you may need to adjust the commands and configurations accordingly.
 
 # Part 1: Prepare the engine
 ## Install Ollama
@@ -43,14 +43,18 @@ uv init
 uv python pin 3.12
 ```
 
-Update the pyproject.toml to specify Python 3.12 we just installed [pyproject.toml](pyproject.toml).
+Update the file pyproject.toml to specify Python 3.12 we just installed, see [pyproject.toml](pyproject.toml).
 
 We now have two options to handle the documents and the vector database. We can either use pypdf(*1) or we can use pymupdf, which is faster for larger documents. For this demo, I ended up switching to pymupdf(**2) cause I noticed it was faster, but you can start with pypdf and chromadb if you want to keep it simple.
 
-Add fastmcp, chromadb, ollama, pypdf and langchain-text-splitters to the project.
+Add fastmcp, chromadb, ollama to the project 
 ```shell
 uv add fastmcp chromadb ollama
+```
+Add pypdf and langchain-text-splitters to the project (*1)
+```shell
 uv add pypdf langchain-text-splitters
+
 ```
 
 Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF. Written in C, it performs 20x to 50x faster than pypdf.
