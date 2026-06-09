@@ -12,3 +12,5 @@ rag/contentData/
 .DS_Store
 **/.DS_Store
 ui/rag/chroma_db/chroma.sqlite3
+~$privateAI-demo-architecture_v1.0.pptx
+.gitignore

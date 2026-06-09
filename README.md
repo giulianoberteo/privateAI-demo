@@ -175,7 +175,8 @@ There are two different models working together here:
 
 - The Librarian (Embeddings): bge-m3 (This handles the searching).
 
-## How does it all work together?
+# Streamlit UI for Local RAG (running without Claude Desktop)
+In this scenario, the Streamlit UI is acting as the "front desk" of a local library. It takes your question, sends it to the "librarian" (BGE-M3 + ChromaDB) to find the relevant documents, and then passes everything to the "brain" (Qwen 3.5) to synthesize a response.
 
 ### 1) The "Brain" (Reasoning): Qwen 3.5
 The Qwen 3.5 (35B-A3B) model is the one doing the actual thinking.
@@ -184,7 +185,7 @@ The Qwen 3.5 (35B-A3B) model is the one doing the actual thinking.
 - Uses its Mixture of Experts (MoE) architecture to decide which part of its brain is best suited to answer your VCF question.
 - Synthesizes the final response, ensuring it follows your instructions (e.g., "Be a VCF Architect").
 
-### 2) The "Engine Room" (Execution): my M2 Max GPU
+### 2) The "Engine Room" (Execution): My M2 Max GPU
 Even though Qwen is the "software," my local M2 Max’s GPU and Unified Memory are doing the physical work. When you see the text streaming in the UI, that is your Mac's Neural Engine and GPU cores calculating the probability of every single word in real-time.
 
 In my case, I have a MacBook Pro M2 Max, which has high memory bandwidth, which is why a 35B model can "reason" relatively quickly. 
