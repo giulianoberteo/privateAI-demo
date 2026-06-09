@@ -3,9 +3,9 @@ v1.0
 
 This version does not have a "smart ingestion" meaninig it can't handle different document types.
 
-This script ingests all the PDS inside a folder (in my case VCF9 documenation) into a ChromaDB vector store for RAG applications in your MCP project.
+This script ingests all the PDFs inside a folder (in my use case, a 1 big PDF file containing all the VCF 9.0 documenation) into a ChromaDB vector store for RAG applications in your MCP project.
 
-It uses PyMuPDF for extraction, mxbai-embed-large via Ollama for embeddings, and recursive text splitting with batching for efficient processing.
+It then uses PyMuPDF for content extraction, mxbai-embed-large via Ollama for embeddings, and recursive text splitting with batching for efficient processing.
 
 Key Features
 - Processes all PDFs in ./contentData/ with progress tracking via tqdm.
@@ -32,25 +32,26 @@ emb_fn = embedding_functions.OllamaEmbeddingFunction(
     model_name="mxbai-embed-large",
     url="http://localhost:11434/api/embeddings",
 )
+
 # Define the collection name and embedding function for Chroma DB
 collection = client.get_or_create_collection(name="docs", embedding_function=emb_fn)
 
-# define how to split the document ingestion and chunk sizes for mxbai
+# Define how to split the document ingestion and chunk sizes for mxbai
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=800,  # Reduced from 1200
     chunk_overlap=100,
     separators=["\n\n", "\n", ". ", " ", ""]
 )
-# point to the directory where the documents are stored
+# Point to the directory where the documents are stored
 data_dir = Path("contentData")
 pdf_files = list(data_dir.glob("*.pdf"))
 
-# check if there's content to process
+# Checking if there's content to process
 if not pdf_files:
     print("❌ No PDFs found!")
     exit()
 
-# ingestion loop with progress bars and error handling
+# Ingestion loop with progress bars and error handling
 for pdf_path in pdf_files:
     doc = pymupdf.open(pdf_path)
     batch_docs, batch_metadatas, batch_ids = [], [], []
