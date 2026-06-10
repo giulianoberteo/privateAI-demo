@@ -2,6 +2,43 @@
 
 ---
 
+## Change Set 4 — Token usage display in Streamlit UI
+
+**Date:** 2026-06-10  
+**Commit:** `(see below)`  
+**Branch:** `main`
+
+### What was added
+
+#### `ui/ui-app.py`
+
+**`_chunk_stat(chunk, key)`** helper  
+Safely reads an integer stat from an Ollama streaming chunk, handling both dict-style (older library) and attribute-style (0.6.x typed objects) access. Returns 0 on missing/None values.
+
+**`_token_caption(tokens)`** helper  
+Renders a compact `st.caption` line under an assistant message:  
+`↑ 8,432 prompt  ·  ↓ 312 completion  ·  97 tok/s`  
+Only includes segments where the value is non-zero.
+
+**Per-response token stats**  
+After the streaming loop, the final Ollama chunk (`done=True`) is captured as `last_chunk`. Three fields are extracted:
+- `prompt_eval_count` → prompt tokens (system prompt + RAG context + conversation history)
+- `eval_count` → completion tokens generated
+- `eval_duration` → nanoseconds spent generating; used to compute `tok/s`
+
+The stats dict is passed to `_token_caption()` for immediate display, then stored inside the message dict (`message["tokens"]`) so the caption re-renders correctly when the chat history is replayed on subsequent Streamlit reruns.
+
+**Session token total in sidebar**  
+`st.session_state.session_tokens` accumulates prompt and completion tokens across all turns. The sidebar shows a `**Session tokens**` block once at least one response has been generated:
+```
+↑ 12,450 prompt
+↓ 890 completion
+13,340 total
+```
+Resets to zero when the user clicks **Clear Chat** or switches VCF version.
+
+---
+
 ## Change Set 3 — README rewrite
 
 **Date:** 2026-06-10  
