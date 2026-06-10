@@ -1,5 +1,77 @@
 # Claude Code Changes — privateAI-demo
 
+---
+
+## Change Set 2 — Versioned Collections (VCF 9.0 / 9.1)
+
+**Date:** 2026-06-10  
+**Commit:** `(see below)`  
+**Branch:** `main`
+
+### Context
+
+VCF 9.1 was released. Ingesting it into the existing single `docs` collection
+would produce conflicting search results: the same topic described differently
+across versions could appear in the same retrieval window, confusing the LLM.
+
+**Decision:** Option A — separate ChromaDB collection per version.  
+Each query hits exactly one version's data, guaranteeing zero cross-version conflicts.
+Comparison questions ("what changed in 9.1?") work by calling the search tool
+twice — once per version — which the LLM orchestrates automatically via MCP tool-calling.
+
+### Migration steps (Option A)
+
+1. Place `vmware-cloud-foundation-9.0.pdf` in `rag/contentData/` and run `uv run ingestData.py`
+   → creates `docs_vcf90` collection.
+2. Place `vmware-cloud-foundation-9-1.pdf` in `rag/contentData/` and run again
+   → creates `docs_vcf91` collection.
+3. Delete the legacy `docs` collection once verified:
+   ```bash
+   python -c "import chromadb; chromadb.PersistentClient('rag/chroma_db').delete_collection('docs')"
+   ```
+
+### Files changed
+
+#### `config.py`
+- Removed `COLLECTION = "docs"` (single hardcoded name).
+- Added `VERSION_MAP: dict[str, str]` — maps `"9.0"` → `"docs_vcf90"`, `"9.1"` → `"docs_vcf91"`.
+- Added `DEFAULT_VERSION = "9.1"` (overridable via env var).
+- Adding a new VCF version in future only requires adding one entry to `VERSION_MAP`.
+
+#### `rag/ingestData.py`
+- Added `version_from_filename()`: extracts `"9.0"` / `"9.1"` from a filename using
+  a regex anchored to known product keywords (`foundation`, `vcf`, `cloud`), with a
+  generic major.minor fallback.
+- Files are grouped by detected version; each group is upserted into its own collection
+  (`docs_vcf90`, `docs_vcf91`) via `config.VERSION_MAP`.
+- Each chunk's metadata now includes `"version"` alongside `"source"` and `"page"`.
+- Files whose version cannot be detected, or whose version is not in `VERSION_MAP`,
+  are skipped with a clear hint message.
+- Startup migration guard: warns if the legacy `docs` collection still exists.
+
+#### `mcp/server.py`
+- Added `_get_collection(version)` helper that opens the correct ChromaDB collection
+  and raises a clear error (with fix instructions) if it does not exist.
+- `search_vcf_documentation` now has a `version: str = config.DEFAULT_VERSION` parameter.
+- Tool docstring explicitly instructs the LLM to call the tool twice for comparison questions.
+- Result header updated to `[VCF {ver} | {source} | Page {page}]`.
+
+#### `ui/ui-app.py`
+- Replaced `init_db()` with two functions: `_init_chroma()` (shared client) and
+  `get_collection(version)` (cached per version string).
+- Added a version radio selector to the sidebar (sorted descending, defaults to latest).
+- Auto-clears chat history when the user switches version, preventing answers from
+  one version being mixed with questions about another.
+- Chat input placeholder and system prompt are now version-aware.
+
+#### `rag/testSearch.py`
+- Added `--version` CLI argument (default: `config.DEFAULT_VERSION`).
+- Help text lists all available versions from `config.VERSION_MAP` dynamically.
+
+---
+
+## Change Set 1 — Refactor & Critical Fixes
+
 **Date:** 2026-06-10  
 **Commit:** `1e9945b`  
 **Branch:** `main`

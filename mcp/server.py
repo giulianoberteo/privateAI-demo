@@ -1,20 +1,20 @@
 """
-VCF 9 Assistant: Local MCP Server for Documentation RAG & Lab Operations.
+VCF Assistant: Local MCP Server for Documentation RAG & Lab Operations.
 
-This server acts as a bridge between LLMs and local VCF 9 documentation.
+Each VCF version lives in its own ChromaDB collection (docs_vcf90, docs_vcf91, …).
+The search tool accepts an explicit version parameter so the LLM always queries
+a single, unambiguous collection — eliminating conflicting cross-version results.
 
-CORE CAPABILITIES:
-1. Retrieval Augmented Generation (RAG):
-   Performs semantic vector searches across an 8,000+ page VCF 9 technical
-   library stored in a local ChromaDB instance.
+For comparison questions ("what changed between 9.0 and 9.1?") the LLM calls
+the tool twice — once per version — then synthesises both clean result sets.
 
-2. Live Infrastructure Monitoring (WIP):
-   Integrates with VCF Operations (Aria Ops) via REST API to pull real-time
-   critical alerts. Configure via VCF_OPS_URL and VCF_OPS_TOKEN env vars.
+CAPABILITIES:
+1. search_vcf_documentation — RAG over a specific VCF version's documentation.
+2. get_lab_alerts            — Live alerts from VCF Operations (Aria Ops) via REST (WIP).
 
 INFRASTRUCTURE:
 - Framework: FastMCP (Model Context Protocol)
-- Database: ChromaDB (Local Persistent Client)
+- Database: ChromaDB (Local Persistent Client, versioned collections)
 - Embeddings: Ollama API (Local)
 """
 
@@ -29,42 +29,72 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 
-mcp = FastMCP("VCF9-Assistant")
+mcp = FastMCP("VCF-Assistant")
 
-# --- DB connection (fail fast with a clear message if DB is missing) ---
+# Shared client and embedding function — opened once, reused across all tool calls.
 try:
-    _client = chromadb.PersistentClient(path=str(config.DB_PATH))
+    _chroma = chromadb.PersistentClient(path=str(config.DB_PATH))
     _emb_fn = embedding_functions.OllamaEmbeddingFunction(
         model_name=config.EMBED_MODEL,
         url=f"{config.OLLAMA_URL}/api/embeddings",
     )
-    collection = _client.get_collection(name=config.COLLECTION, embedding_function=_emb_fn)
 except Exception as e:
     raise RuntimeError(
-        f"Failed to open ChromaDB collection '{config.COLLECTION}' at {config.DB_PATH}.\n"
+        f"Failed to initialise ChromaDB at {config.DB_PATH}.\n"
         f"Run rag/ingestData.py first to build the index.\nOriginal error: {e}"
     ) from e
 
 
+def _get_collection(version: str):
+    """Return the ChromaDB collection for the requested VCF version."""
+    if version not in config.VERSION_MAP:
+        available = ", ".join(sorted(config.VERSION_MAP))
+        raise ValueError(f"Unknown version '{version}'. Available: {available}")
+    col_name = config.VERSION_MAP[version]
+    try:
+        return _chroma.get_collection(name=col_name, embedding_function=_emb_fn)
+    except Exception:
+        raise ValueError(
+            f"Collection '{col_name}' for VCF {version} does not exist. "
+            f"Run rag/ingestData.py with the VCF {version} PDF in contentData/ to build it."
+        )
+
+
 # --- Tool 1: Search VCF Documentation ---
 @mcp.tool()
-def search_vcf_documentation(query: str, n_results: int = config.DEFAULT_N) -> str:
-    """Search the 8,000+ page VCF 9 documentation for specific technical answers.
+def search_vcf_documentation(
+    query: str,
+    version: str = config.DEFAULT_VERSION,
+    n_results: int = config.DEFAULT_N,
+) -> str:
+    """Search the VCF documentation for a specific version.
+
+    Each version is stored in its own isolated collection, so results are
+    guaranteed to contain only content from the requested version.
+
+    For comparison questions (e.g. "what changed in 9.1?"), call this tool
+    twice — once with version='9.0' and once with version='9.1' — then
+    synthesise the two result sets.
 
     Args:
-        query: The technical question or topic to search for.
-        n_results: Number of document chunks to retrieve (default 20, max 50).
+        query:     Technical question or topic to search.
+        version:   VCF version to query. Available: 9.0, 9.1. Defaults to 9.1.
+        n_results: Number of chunks to retrieve (default 20, max 50).
     """
-    n_results = min(n_results, 50)  # Hard cap to avoid overwhelming the LLM
-    instructional_query = f"{config.QUERY_PREFIX}{query}"
+    collection = _get_collection(version)
+    n_results  = min(n_results, 50)
 
-    results = collection.query(query_texts=[instructional_query], n_results=n_results)
+    results = collection.query(
+        query_texts=[f"{config.QUERY_PREFIX}{query}"],
+        n_results=n_results,
+    )
 
     output = []
     for text, meta in zip(results["documents"][0], results["metadatas"][0]):
         source = meta.get("source", "unknown")
         page   = meta.get("page", "?")
-        output.append(f"[{source} | Page {page}]\n{text}")
+        ver    = meta.get("version", version)
+        output.append(f"[VCF {ver} | {source} | Page {page}]\n{text}")
 
     return "\n\n---\n\n".join(output)
 
@@ -72,7 +102,7 @@ def search_vcf_documentation(query: str, n_results: int = config.DEFAULT_N) -> s
 # --- Tool 2: VCF Operations live alerts (WIP) ---
 @mcp.tool()
 async def get_lab_alerts(severity: str = "CRITICAL") -> str:
-    """Fetch live alerts directly from the VCF 9 Operations (Aria Ops) lab.
+    """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
     Requires VCF_OPS_URL and VCF_OPS_TOKEN environment variables.
     """
