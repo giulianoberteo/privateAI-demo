@@ -1,158 +1,223 @@
 # Disclaimer
 I'm not an expert in Artificial Intelligence, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo.
 
-This article is my personal learning experience setting up some local RAG & MCP servers. Your mileage might vary. 
+This is my personal learning experience setting up a fully local RAG & MCP server stack. Your mileage might vary.
 
-My machine is a MacBook Pro M2 Max with 32GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can definitely use larger models and bigger chunks for better performance.
+My machine is a MacBook Pro M2 Max with 32 GB of RAM, so I had to make some tradeoffs in terms of model size and chunking strategy to avoid running out of memory. If you have more resources available, you can use larger models and bigger chunks for better performance.
 
-All commands and code snippets in this article are based on running on Apple Silicon with macOS. If you're using a different operating system or architecture, you may need to adjust the commands and configurations accordingly.
+All commands and code snippets are based on Apple Silicon with macOS. If you're on a different OS or architecture, adjust accordingly.
+
+---
+
+# Quick Start
+
+```bash
+# 1. Install Ollama and pull the models
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull mxbai-embed-large
+ollama pull qwen3.5:35b-a3b
+
+# 2. Install uv and set up the project
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env   # restart shell or source the env
+uv sync                        # installs all dependencies from pyproject.toml
+
+# 3. Place your VCF PDFs in rag/contentData/ and ingest them
+uv run rag/ingestData.py
+
+# 4a. Run the Streamlit UI
+uv run streamlit run ui/ui-app.py
+
+# 4b. Or start the MCP server (for Claude Desktop / Cherry Studio / etc.)
+uv run mcp/server.py
+```
+
+---
 
 # System Architecture
-This project implements a 100% Local Retrieval-Augmented Generation (RAG) architecture. Every component, from text extraction to vector storage and language model inference, runs entirely on the host machine (in my case a MacBook Pro M2 Max), ensuring absolute data locality.
 
-The architecture is split into three core workflows as visualized here:
+This project implements a 100% Local Retrieval-Augmented Generation (RAG) architecture. Every component — from text extraction to vector storage and language model inference — runs entirely on the host machine, ensuring absolute data locality.
+
+The architecture is split into three core workflows:
 
 <img src="screenshots/system-architecture.png" alt="System Architecture" width="700"/>
 
-## 1.Offline Data Ingestion & Indexing (The Blue Pipeline)
+## 1. Offline Data Ingestion & Indexing (The Blue Pipeline)
 Before any chat takes place, raw technical data is prepared and stored in a structured format:
 
-- **Document parsing**: The ingestion pipeline (rag/ingestData.py) reads local VCF technical resources (PDF, TXT, DOCX, etc.).
-- **Text chunking**: Documents are split into semantic, manageable text blocks to fit the optimal context window of the model.
-- **Vector embeddings via Ollama**: Each text chunk is sent locally to Ollama running the BGE-M3 embedding model. This model converts human text into high-dimensional mathematical vectors representing technical intent.
-- **Storage**: These vectors, alongside critical metadata (source file, extension, page numbers), are saved into a local instance of ChromaDB (our vector store).
+- **Document parsing**: `rag/ingestData.py` reads local VCF technical resources (PDF, TXT).
+- **Version detection**: the filename is parsed to determine the VCF version (e.g. `9.0`, `9.1`). Each version is stored in its own isolated ChromaDB collection (`docs_vcf90`, `docs_vcf91`, …) so queries never return conflicting results from two versions simultaneously.
+- **Text chunking**: documents are split into semantic, manageable text blocks to fit the embedding model's context window.
+- **Vector embeddings via Ollama**: each chunk is sent to the `mxbai-embed-large` model running locally via Ollama. This converts text into high-dimensional mathematical vectors representing technical intent.
+- **Storage**: vectors, alongside metadata (`source`, `page`, `version`), are saved into a local ChromaDB instance.
 
-## 2.Live Agent Interaction & RAG Workflow (The Green Pipeline)
-When a user asks a question via the frontend, the system orchestrates a real-time retrieval-and-generation loop:
+## 2. Live Agent Interaction & RAG Workflow (The Green Pipeline)
+When a user asks a question via the frontend:
 
-- **The user query**: A question is submitted via the Streamlit UI (ui/ui-app.py)
-- **Local vector search**: the UI script seamlessly converts the question into a vector and queries ChromaDB. The database searches millions of vectors in milliseconds, returning the top relevant technical document snippets.
-- **Contextual synthesis**: the UI packages the user's original question alongside the retrieved text snippets into an augmented prompt.
-- **Local inference via Ollama**: this comprehensive payload is dispatched to Qwen 3.5 (or Qwen 2.5) running locally. The model executes its reasoning engine purely on local unified memory/GPU resources.
-- **Streaming delivery**: the final, factually anchored response is streamed token-by-token back to the Streamlit UI chat interface.
+- **User query** → submitted via the Streamlit UI (`ui/ui-app.py`).
+- **Version selection** → the UI sidebar lets you pin to a specific VCF version. The query only touches that version's collection.
+- **Local vector search** → the question is converted to a vector and ChromaDB returns the top matching document chunks in milliseconds.
+- **Contextual synthesis** → the original question + retrieved snippets are packaged into an augmented prompt.
+- **Local inference via Ollama** → dispatched to `qwen3.5:35b-a3b` running locally; response streamed token-by-token back to the UI.
 
 ## 3. Extensible Multi-App Gateway (The Orange/Brown Pathway)
-Beyond a custom web interface, this architecture decouples the knowledge base using the Model Context Protocol (MCP):
+Beyond the custom web interface, the knowledge base is also exposed via the Model Context Protocol (MCP):
 
-- **FastMCP Integration**: the mcp/server.py script acts as a standardized wrapper. It exposes the exact same ChromaDB search functions as a unified plugin tool (vcf_documentation).
-- **Third-Party agnostic**: any MCP-compliant client ecosystem (such as Claude Desktop, Perplexity, Cherry Studio etc...) can securely bind to this local server. This lets you swap out your user interface entirely while keeping the underlying data pipelines, embeddings, and vector stores intact.
+- **FastMCP Integration**: `mcp/server.py` wraps ChromaDB as a standardised MCP tool (`search_vcf_documentation`). The tool accepts a `version` parameter so the calling LLM can target a specific VCF release or call it twice for cross-version comparisons.
+- **Third-party agnostic**: any MCP-compliant client (Claude Desktop, Cherry Studio, Perplexity, etc.) can bind to this local server, letting you swap frontends while keeping the data pipelines and vector stores intact.
 
-# Part 1: Prepare the engine
+---
+
+# Part 1: Prepare the Engine
+
 ## Install Ollama
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 ## Pull the models
-Initially, I used the simplest llama3. Later, while doing further testing, switched to qwen2.5:32b, which does provide better reasoning, and 32B parameters (~19GB disk space required and RAM).
+
+Two models work together here — a **Librarian** (embeddings) and a **Brain** (reasoning):
+
 ```shell
-ollama pull llama3
-ollama pull nomic-embed-text
-```
-I ended up switching to a better model for larger pages and documents. The following model replaces nomic-embed-text. It is more accurate for technical retrieval, and has a larger context window (4k tokens vs 2k tokens for nomic-embed-text). The tradeoff is that it is slightly larger in size (1.5GB vs 1GB for nomic-embed-text).
-```shell
-ollama pull qwen2.5:32b
+# The Librarian — converts text to vectors for semantic search
 ollama pull mxbai-embed-large
+
+# The Brain — reasons over retrieved context and generates answers
+ollama pull qwen3.5:35b-a3b
 ```
 
-# Part 2: Setup the project
-Install uv (fast Python manager)
+> **Optional upgrade:** `bge-m3` is the current best-in-class local embedding model for large technical libraries (8k context window, hybrid dense+sparse retrieval). See [Considerations](#considerations-and-next-steps) for how to switch.
+
+---
+
+# Part 2: Setup the Project
+
+Install uv (fast Python package manager):
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-Restart the shell session, or alternatively run:
+
+Restart the shell session, or run:
 ```shell
-source $HOME/.local/bin/env (sh, bash, zsh)
-source $HOME/.local/bin/env.fish (fish) 
+source $HOME/.local/bin/env          # sh, bash, zsh
+source $HOME/.local/bin/env.fish     # fish
 ```
-Create the project folder.
+
+Clone or create the project folder:
 ```shell
-mkdir rag
-cd rag
-uv init
+git clone <repo-url> privateAI-demo
+cd privateAI-demo
 uv python pin 3.12
 ```
 
-Update the file pyproject.toml to specify Python 3.12 we just installed, see [pyproject.toml](pyproject.toml).
-
-We now have two options to handle the documents and the vector database. We can either use pypdf(*1) or we can use pymupdf, which is faster for larger documents. For this demo, I ended up switching to pymupdf(**2) cause I noticed it was faster, but you can start with pypdf and chromadb if you want to keep it simple.
-
-Add fastmcp, chromadb, ollama to the project 
+Install all dependencies in one command (reads from `pyproject.toml`):
 ```shell
-uv add fastmcp chromadb ollama
-```
-Add pypdf and langchain-text-splitters to the project (*1)
-```shell
-uv add pypdf langchain-text-splitters
-
+uv sync
 ```
 
-Alternatively, for better documents handling when there's thousands of pages, it's best to use PyMuPDF. Written in C, it performs 20x to 50x faster than pypdf.
-(**2)
+> All dependencies — `chromadb`, `fastmcp`, `httpx`, `langchain-text-splitters`, `ollama`, `pymupdf`, `pypdf`, `streamlit`, `tqdm` — are declared in `pyproject.toml` and installed by `uv sync`.
+
+---
+
+# Part 3: Ingest Documents into the Vector DB
+
+## Prepare your documents
+
+Place your VCF PDF files inside `rag/contentData/`. The ingestion script automatically detects the VCF version from the filename:
+
+| File | Detected version | Collection created |
+|---|---|---|
+| `vmware-cloud-foundation-9.0.pdf` | `9.0` | `docs_vcf90` |
+| `vmware-cloud-foundation-9-1.pdf` | `9.1` | `docs_vcf91` |
+
+Both files can be present at the same time — each is routed to its own collection in a single run.
+
+## Run the ingestion
+
 ```shell
-uv add pymupdf
+uv run rag/ingestData.py
 ```
 
-# Part 3: Python ingestion script / Building the Vector DB
-Used to ingest the documents that we want the RAG to index inside ChromaDB. Each paragraph get processed into chromadb and assigned a vector "index map".
-See [ingestData.py](rag/ingestData.py)
+The script will:
+1. Detect VCF version(s) from the filename(s).
+2. Create or update the matching ChromaDB collection(s) under `rag/chroma_db/`.
+3. Split each document into ~800-character chunks (configurable, see [Configuration](#configuration)).
+4. Embed and upsert every chunk via `mxbai-embed-large`. Re-running is safe — upsert is idempotent.
+5. Report total chunks indexed on exit.
 
-Adding a progress bar (tqdm) and run the ingestion script, from inside the rag folder:
+> See [`rag/ingestData.py`](rag/ingestData.py)
+
+## Verify ingestion
+
+Use the CLI search utility to run a quick vector query without starting the full UI:
+
 ```shell
-uv add tqdm
-uv run ingestData.py
+uv run rag/testSearch.py "stretch cluster design decisions"
+uv run rag/testSearch.py "NSX configuration" --version 9.1 -n 10
 ```
-# Part 4: Create the MCP server (FastMCP)
-The **server.py** file is the heart of this project, functioning as a Model Context Protocol (MCP) server. 
-It acts as a secure, local bridge that allows Large Language Models (LLMs) to interact with private VMware Cloud Foundation (VCF) 9 data and lab infrastructure.
 
-**Semantic Documentation Search (RAG):**
-Exposes the **search_vcf_documentation** tool, which performs Retrieval-Augmented Generation. It uses ChromaDB and the mxbai-embed-large model to search through 8,000+ pages of VCF 9 documentation. Instead of simple keyword matching, it finds information based on technical intent and meaning.
+---
 
-**Live Lab Insights (WIP):**
-Exposes the **get_lab_alerts** tool, designed to interface directly with the VCF Operations (Aria Ops) API. This allows the AI to fetch real-time critical alerts and health status from a live environment, moving beyond static documentation into active monitoring.
+# Part 4: Create the MCP Server (FastMCP)
 
-See [server.py](mcp/server.py)
+`mcp/server.py` is the heart of the project. It wraps the ChromaDB vector store as a standardised MCP tool so any compatible LLM client can query your private VCF documentation.
 
-# Part 5: download and install Claude Desktop
+## Tools exposed
+
+**`search_vcf_documentation(query, version="9.1", n_results=20)`**  
+Semantic RAG search across the specified VCF version's documentation. Returns the top `n_results` chunks with source file, page number, and version label.
+
+- Set `version="9.0"` to query the 9.0 library specifically.
+- For **cross-version comparison** questions (e.g. *"what changed in 9.1 for stretch clustering?"*), the LLM will automatically call this tool twice — once per version — then synthesise both result sets. No special configuration needed.
+
+**`get_lab_alerts(severity="CRITICAL")`** *(WIP)*  
+Fetches live alerts from VCF Operations (Aria Ops) via REST API. Requires `VCF_OPS_URL` and `VCF_OPS_TOKEN` environment variables. See [Configuration](#configuration).
+
+> See [`mcp/server.py`](mcp/server.py)
+
+---
+
+# Part 5: Install Claude Desktop and Connect the MCP Server
+
 ```shell
 brew install --cask claude
 ```
-## Configure Claude Desktop to point to the local RAG
-Extract the path to the rag and mcp scripts. In my case
 
-/Users/giuliano/local-code-repo/privateAI-demo/rag
+## Configure Claude Desktop
 
-/Users/giuliano/local-code-repo/privateAI-demo/mcp
+Open the configuration file:
+```
+~/Library/Application Support/Claude/claude_desktop_config.json
+```
 
-Open Claude Desktop's configuration file ~/Library/Application Support/Claude/claude_desktop_config.json.
+Add the MCP server entry below, replacing `/Users/YOUR_USERNAME/` with your actual home directory:
 
-Customise the specs as following, using your own paths.
 ```json
 {
   "mcpServers": {
-    "docs": {
-      "command": "/Users/giuliano/.local/bin/uv",
+    "vcf-docs": {
+      "command": "/Users/YOUR_USERNAME/.local/bin/uv",
       "args": [
         "--directory",
-        "/Users/giuliano/local-code-repo/privateAI-demo/rag",
+        "/Users/YOUR_USERNAME/local-code-repo/privateAI-demo",
         "run",
-        "/Users/giuliano/local-code-repo/privateAI-demo/mcp/server.py"
+        "mcp/server.py"
       ]
     }
-  },
-  "preferences": {
-    "coworkScheduledTasksEnabled": false,
-    "ccdScheduledTasksEnabled": false,
-    "coworkWebSearchEnabled": true,
-    "sidebarMode": "chat"
   }
 }
 ```
-# Part 6: Test the RAG in Claude Desktop
-Open Claude Desktop, and ask questions about VCF 9 documentation. You should see the RAG tool "docs" being called, and the relevant documentation snippets being returned as part of the answer. Additionally, you can also request the source refereces that the RAG is using to answer, and you should see the relevant page numbers and sections of the documentation being returned.
 
-Screenshots here for reference:
+> The `--directory` must point to the `privateAI-demo/` project root (where `pyproject.toml` lives) so `uv` picks up the correct virtual environment.
+
+---
+
+# Part 6: Test the RAG in Claude Desktop
+
+Open Claude Desktop and ask questions about VCF documentation. You should see the `vcf-docs` tool being called, with relevant snippets returned as part of the answer.
+
+Screenshots for reference:
 
 Prompt: **List all design decisions that relate to stretch clustering in the VCF fleet with multiple sites across multiple regions blueprint**
 
@@ -166,75 +231,110 @@ Prompt: **are you getting this information from the internet ?**
 
 ![claude-prompt-3-references](screenshots/claude-prompt-3-sources.png "Claude Prompt 3 - Sources")
 
+---
+
+# Part 7: Streamlit UI (standalone, no Claude Desktop required)
+
+The Streamlit app provides a full chat interface that talks directly to ChromaDB and Ollama — no internet, no external API calls.
+
+```shell
+uv run streamlit run ui/ui-app.py
+```
+
+## Features
+
+- **Version selector** in the sidebar — pin to VCF 9.0 or 9.1 (or any version you've ingested). Switching version automatically clears the chat history to prevent cross-version context bleed.
+- **Dynamic model list** — the Brain dropdown is populated live from `ollama list`, so any model you've pulled appears automatically.
+- **Temperature slider** — lower values (0.0–0.1) produce more deterministic, factual answers; higher values allow more creative synthesis.
+- **Clear Chat button** — resets the conversation without restarting the server.
+- **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
+
+### How it works
+
+1. **Streamlit** (`ui-app.py`) coordinates the whole thing.
+2. **mxbai-embed-large** + **ChromaDB** — the Librarian — finds the right pages.
+3. **qwen3.5:35b-a3b** — the Brain — synthesises the answer using the retrieved context.
+4. **M2 Max GPU / Unified Memory** — provides the raw compute for local inference.
+
+### Why this is different from Claude Desktop / ChatGPT
+
+With Claude Desktop or ChatGPT, your data is sent to Anthropic's or OpenAI's servers for reasoning.
+
+With the Streamlit demo, the data never leaves your machine. If you turned off Wi-Fi right now, the reasoning would still work perfectly.
+
+---
+
+# Configuration
+
+All tuneable parameters live in [`config.py`](config.py) at the project root. Every value can be overridden with an environment variable — no code changes needed.
+
+| Environment variable | Default | Purpose |
+|---|---|---|
+| `EMBED_MODEL` | `mxbai-embed-large` | Ollama embedding model |
+| `LLM_MODEL` | `qwen3.5:35b-a3b` | Ollama reasoning model (UI default) |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama API base URL |
+| `DEFAULT_VERSION` | `9.1` | VCF version searched when none is specified |
+| `NUM_CTX` | `32768` | Ollama context window size (tokens) |
+| `CHUNK_SIZE` | `800` | Characters per ingestion chunk |
+| `CHUNK_OVERLAP` | `100` | Overlap between consecutive chunks |
+| `BATCH_LIMIT` | `20` | Max chunks per ChromaDB upsert batch |
+| `DEFAULT_N` | `20` | Default number of results returned by RAG |
+| `VCF_OPS_URL` | *(lab default)* | Aria Ops API endpoint (for `get_lab_alerts`) |
+| `VCF_OPS_TOKEN` | *(unset)* | Base64 `user:pass` for Aria Ops auth |
+
+Example — switch the embedding model for a single ingest run without editing any file:
+
+```shell
+EMBED_MODEL=bge-m3 uv run rag/ingestData.py
+```
+
+---
+
 # Considerations and Next Steps
 
-Fine-tuning how to ingest data and what model to use is always the most critical part of any RAG project.
+Fine-tuning how data is ingested and which models are used is always the most critical part of any RAG project.
 
-It could be that standard 800-character chunks are too granular — causing the AI to lose the high-level context of complex multi-step configurations. In such case, upgrade your embedding engine to BGE-M3.
+Standard 800-character chunks can be too granular — causing the AI to lose the high-level context of complex multi-step configurations. Upgrading the embedding engine to **BGE-M3** addresses this.
 
-Currently, BGE-M3 is the industry-standard choice for local RAG on Apple Silicon for the following reasons:
+## Why BGE-M3 is the recommended upgrade
 
-- Native 8,192 Context Window: Unlike smaller models that struggle with long-form data, BGE-M3 natively supports an 8k token window. This allows the ingestions of much larger "logical" chunks of documents, ensuring the AI sees entire procedures (like an SDDC Manager upgrade) in a single glance.
+- **Native 8,192-token context window** — ingests entire procedures (e.g. an SDDC Manager upgrade) as a single chunk rather than fragmenting them.
+- **Hybrid retrieval (Dense + Sparse)** — doesn't just match meaning (Dense); also performs keyword-style Sparse retrieval to catch specific part numbers, error codes, and CLI flags that other models might miss.
+- **Built for large technical libraries** — consistently outperforms `mxbai-embed-large` on recall across 8,000+ page corpora.
 
-- Hybrid Retrieval (Dense + Sparse): This is its superpower. It doesn't just look for "meaning" (Dense); it also performs "Sparse" retrieval, which acts like a traditional index to catch specific part numbers, error codes, and unique technical terms that other models might overlook.
-
-- Built for Encyclopedias: Specifically optimized for massive, cross-referenced technical libraries, it consistently outperforms mxbai in "Recall" (i.e. the ability to actually find the one correct page out of 8,000+ pages).
-
-## How to Switch to BGE-M3:
-
-Pull the new engine:
+## How to switch to BGE-M3
 
 ```bash
+# 1. Pull the new engine
 ollama pull bge-m3
+
+# 2. Delete the existing collections (embeddings are model-specific)
+uv run python -c "
+import chromadb
+db = chromadb.PersistentClient('rag/chroma_db')
+for col in db.list_collections():
+    db.delete_collection(col.name)
+print('All collections deleted.')
+"
+
+# 3. Re-ingest using the new model (no code changes needed)
+EMBED_MODEL=bge-m3 uv run rag/ingestData.py
 ```
 
-Wipe the old index: (Since embeddings are model-specific).
-```bash
-rm -rf /Users/giuliano/local-code-repo/privateAI-demo/rag/chroma_db
-```
+The Streamlit UI and MCP server will pick up `EMBED_MODEL=bge-m3` automatically if you add it to your shell environment or a `.env` file.
 
-Update the Code. In both ingestData.py and server.py, change the model_name in your embedding function:
+## Multi-version support
 
-```python
-model_name="bge-m3"
-```
+The project is designed to grow with new VCF releases. To add a future version (e.g. 9.2):
 
-There are two different models working together here:
+1. Add one entry to `VERSION_MAP` in `config.py`:
+   ```python
+   VERSION_MAP = {
+       "9.0": "docs_vcf90",
+       "9.1": "docs_vcf91",
+       "9.2": "docs_vcf92",   # ← add this
+   }
+   ```
+2. Place the new PDF in `rag/contentData/` and run `uv run rag/ingestData.py`.
 
-- The Brain (LLM): qwen3.5:35b-a3b (This handles the talking).
-
-- The Librarian (Embeddings): bge-m3 (This handles the searching).
-
-# Streamlit UI for Local RAG (running without Claude Desktop)
-In this scenario, the Streamlit UI is acting as the "front desk" of a local library. It takes your question, sends it to the "librarian" (BGE-M3 + ChromaDB) to find the relevant documents, and then passes everything to the "brain" (Qwen 3.5) to synthesize a response.
-
-### 1) The "Brain" (Reasoning): Qwen 3.5
-The Qwen 3.5 (35B-A3B) model is the one doing the actual thinking.
-- Receives the "Context" (the snippets found in the PDFs). 
-- Reads your "Prompt"
-- Uses its Mixture of Experts (MoE) architecture to decide which part of its brain is best suited to answer your VCF question.
-- Synthesizes the final response, ensuring it follows your instructions (e.g., "Be a VCF Architect").
-
-### 2) The "Engine Room" (Execution): My M2 Max GPU
-Even though Qwen is the "software," my local M2 Max’s GPU and Unified Memory are doing the physical work. When you see the text streaming in the UI, that is your Mac's Neural Engine and GPU cores calculating the probability of every single word in real-time.
-
-In my case, I have a MacBook Pro M2 Max, which has high memory bandwidth, which is why a 35B model can "reason" relatively quickly. 
-
-### 3) The "Librarian" (Retrieval): BGE-M3 + ChromaDB
-
-Before Qwen even starts thinking, server.py script performs a Local Vector Search (read the collection)
-
-- My Mac uses the BGE-M3 model to turn the question into numbers.
-- It scans your ChromaDB (on your SSD) to find the right pages.
-- This happens in milliseconds and stays entirely on your machine.
-
-### Why this is different from Claude/ChatGPT:
-With Claude Desktop: the data is sent to Anthropic’s servers; their massive GPU clusters do the reasoning.
-
-Using my streamlit demo app, the data never leaves your RAM. If you turned off the Wi-Fi right now, the reasoning would still work perfectly.
-
-### Summary of the Workflow:
-- Streamlit (ui-app.py) coordinates the whole thing.
-- BGE-M3 finds the data in ChromaDB.
-- Qwen 3.5 processes the reasoning.
-- M2 Max GPU provides the raw power.
+The UI version selector and MCP tool version parameter will include the new version automatically.

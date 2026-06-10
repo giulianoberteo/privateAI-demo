@@ -2,6 +2,28 @@
 
 ---
 
+## Change Set 3 — README rewrite
+
+**Date:** 2026-06-10  
+**Commit:** `(see below)`  
+**Branch:** `main`
+
+Full rewrite of `README.md` to reflect all code changes made in Change Sets 1 and 2.
+
+Key updates:
+- **Quick Start** section added at the top — four commands to go from zero to running.
+- **Part 1 (models)**: removed the `llama3` / `nomic-embed-text` history; shows only the current recommended models (`mxbai-embed-large` + `qwen3.5:35b-a3b`).
+- **Part 2 (setup)**: corrected folder name (`privateAI-demo`, not `rag`); replaced individual `uv add` commands with `uv sync`.
+- **Part 3 (ingestion)**: added multi-version ingestion table, `testSearch.py` usage, and note that re-runs are idempotent.
+- **Part 4 (MCP server)**: documented `version` parameter and the two-call pattern for cross-version comparison queries.
+- **Part 5 (Claude Desktop)**: replaced hardcoded `/Users/giuliano/` with `/Users/YOUR_USERNAME/`; corrected `--directory` to point to `privateAI-demo/` (project root, where `pyproject.toml` lives).
+- **Part 7 (Streamlit UI)**: added `uv run streamlit run ui/ui-app.py` command; documented version selector, dynamic model list, clear chat, and conversation memory features.
+- **Configuration table** (new section): documents all environment variables from `config.py` — `EMBED_MODEL`, `LLM_MODEL`, `OLLAMA_URL`, `DEFAULT_VERSION`, `NUM_CTX`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `BATCH_LIMIT`, `DEFAULT_N`, `VCF_OPS_URL`, `VCF_OPS_TOKEN`.
+- **BGE-M3 switch**: updated from "edit model_name in the code" to `EMBED_MODEL=bge-m3 uv run rag/ingestData.py`; updated collection deletion command to use `uv run python -c` (no bare `python` / no hardcoded paths).
+- **Multi-version section**: added instructions for adding VCF 9.2 (or any future version) — one line in `VERSION_MAP`, then re-ingest.
+
+---
+
 ## Change Set 2 — Versioned Collections (VCF 9.0 / 9.1)
 
 **Date:** 2026-06-10  
