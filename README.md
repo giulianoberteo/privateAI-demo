@@ -35,7 +35,7 @@ When a user asks a question via the frontend, the system orchestrates a real-tim
 Beyond a custom web interface, this architecture decouples the knowledge base using the Model Context Protocol (MCP):
 
 - **FastMCP Integration**: the mcp/server.py script acts as a standardized wrapper. It exposes the exact same ChromaDB search functions as a unified plugin tool (vcf_documentation).
-- **Third-Party Agnosticism**: any MCP-compliant client ecosystem (such as Claude Desktop, Perplexity, Cherry Studio etc...) can securely bind to this local server. This lets you swap out your user interface entirely while keeping the underlying data pipelines, embeddings, and vector stores intact.
+- **Third-Party agnostic**: any MCP-compliant client ecosystem (such as Claude Desktop, Perplexity, Cherry Studio etc...) can securely bind to this local server. This lets you swap out your user interface entirely while keeping the underlying data pipelines, embeddings, and vector stores intact.
 
 # Part 1: Prepare the engine
 ## Install Ollama
