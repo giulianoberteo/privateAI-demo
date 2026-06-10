@@ -8,32 +8,34 @@ My machine is a MacBook Pro M2 Max with 32GB of RAM, so I had to make some trade
 All commands and code snippets in this article are based on running on Apple Silicon with macOS. If you're using a different operating system or architecture, you may need to adjust the commands and configurations accordingly.
 
 # System Architecture
-This project implements a 100% Local Retrieval-Augmented Generation (RAG) architecture. Every component—from text extraction to vector storage and language model inference—runs entirely on the host machine (optimized for Apple Silicon/M2 Max), ensuring absolute data sovereignty and zero internet dependencies.
+This project implements a 100% Local Retrieval-Augmented Generation (RAG) architecture. Every component, from text extraction to vector storage and language model inference, runs entirely on the host machine (in my case a MacBook Pro M2 Max), ensuring absolute data locality.
+
+The architecture is split into three core workflows as visualized here:
 
 <img src="screenshots/system-architecture.png" alt="System Architecture" width="700"/>
 
 ## 1.Offline Data Ingestion & Indexing (The Blue Pipeline)
 Before any chat takes place, raw technical data is prepared and stored in a structured format:
 
-- Document Parsing: The ingestion pipeline (rag/ingestData.py) reads local VCF technical resources (PDF, TXT, DOCX, etc.).
-- Text Chunking: Documents are split into semantic, manageable text blocks to fit the optimal context window of the model.
-- Vector Embeddings via Ollama: Each text chunk is sent locally to Ollama running the BGE-M3 embedding model. This model converts human text into high-dimensional mathematical vectors representing technical intent.
-- Storage: These vectors, alongside critical metadata (source file, extension, page numbers), are saved into a local instance of ChromaDB (our vector store).
+- **Document parsing**: The ingestion pipeline (rag/ingestData.py) reads local VCF technical resources (PDF, TXT, DOCX, etc.).
+- **Text chunking**: Documents are split into semantic, manageable text blocks to fit the optimal context window of the model.
+- **Vector embeddings via Ollama**: Each text chunk is sent locally to Ollama running the BGE-M3 embedding model. This model converts human text into high-dimensional mathematical vectors representing technical intent.
+- **Storage**: These vectors, alongside critical metadata (source file, extension, page numbers), are saved into a local instance of ChromaDB (our vector store).
 
 ## 2.Live Agent Interaction & RAG Workflow (The Green Pipeline)
 When a user asks a question via the frontend, the system orchestrates a real-time retrieval-and-generation loop:
 
-- The User Query: A question is submitted via the Streamlit UI (ui/ui-app.py)
-- Local Vector Search: the UI script seamlessly converts the question into a vector and queries ChromaDB. The database searches millions of vectors in milliseconds, returning the top relevant technical document snippets.
-- Contextual Synthesis: the UI packages the user's original question alongside the retrieved text snippets into an augmented prompt.
-- Local Inference via Ollama: this comprehensive payload is dispatched to Qwen 3.5 (or Qwen 2.5) running locally. The model executes its reasoning engine purely on local unified memory/GPU resources.
-- Streaming Delivery: the final, factually anchored response is streamed token-by-token back to the Streamlit UI chat interface.
+- **The user query**: A question is submitted via the Streamlit UI (ui/ui-app.py)
+- **Local vector search**: the UI script seamlessly converts the question into a vector and queries ChromaDB. The database searches millions of vectors in milliseconds, returning the top relevant technical document snippets.
+- **Contextual synthesis**: the UI packages the user's original question alongside the retrieved text snippets into an augmented prompt.
+- **Local inference via Ollama**: this comprehensive payload is dispatched to Qwen 3.5 (or Qwen 2.5) running locally. The model executes its reasoning engine purely on local unified memory/GPU resources.
+- **Streaming delivery**: the final, factually anchored response is streamed token-by-token back to the Streamlit UI chat interface.
 
 ## 3. Extensible Multi-App Gateway (The Orange/Brown Pathway)
 Beyond a custom web interface, this architecture decouples the knowledge base using the Model Context Protocol (MCP):
 
-- FastMCP Integration: the mcp/server.py script acts as a standardized wrapper. It exposes the exact same ChromaDB search functions as a unified plugin tool (vcf_documentation).
-- Third-Party Agnosticism: any MCP-compliant client ecosystem (such as Claude Desktop, Perplexity, Cherry Studio etc...) can securely bind to this local server. This lets you swap out your user interface entirely while keeping the underlying data pipelines, embeddings, and vector stores intact.
+- **FastMCP Integration**: the mcp/server.py script acts as a standardized wrapper. It exposes the exact same ChromaDB search functions as a unified plugin tool (vcf_documentation).
+- **Third-Party Agnosticism**: any MCP-compliant client ecosystem (such as Claude Desktop, Perplexity, Cherry Studio etc...) can securely bind to this local server. This lets you swap out your user interface entirely while keeping the underlying data pipelines, embeddings, and vector stores intact.
 
 # Part 1: Prepare the engine
 ## Install Ollama
