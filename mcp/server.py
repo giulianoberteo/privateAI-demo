@@ -40,8 +40,8 @@ emb_fn = embedding_functions.OllamaEmbeddingFunction(
     url="http://localhost:11434/api/embeddings",
 )
 collection = client.get_collection(name="docs", embedding_function=emb_fn)
-
-# --- TOOL 1: THE SEARCH (RAG) ---
+# Tools will use this collection to perform RAG queries against the VCF9 documentation.
+# --- Tool #1: Search VCF Documentation  ---
 @mcp.tool()
 def search_vcf_documentation(query: str) -> str:
     """Search the 8,000+ page VCF9 documentation for specific technical answers."""
@@ -58,7 +58,7 @@ def search_vcf_documentation(query: str) -> str:
         
     return "\n\n---\n\n".join(output)
 
-# --- TOOL 2: THE ACTION (VCF9 API) --- not working at the moment - work in progress, need to develop further this section
+# --- Tool 2: VCF Operations API alert /// not working at the moment - work in progress, need to develop further this section
 @mcp.tool()
 async def get_lab_alerts(severity: str = "CRITICAL") -> str:
     """Fetch live alerts directly from the VCF9 Operations lab."""
