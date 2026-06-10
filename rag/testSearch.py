@@ -1,52 +1,56 @@
 """
-v1.0    
+v1.1
 
-Just a test search function to perform samply ChromaDB queries against indexed data.
+CLI utility to run ad-hoc ChromaDB queries against the indexed VCF documentation.
+No LLM reasoning — raw vector search results only.
 
-Does not have reasoning.
-
+Usage:
+    uv run testSearch.py "your question here"
+    uv run testSearch.py "your question here" -n 10
 """
-import chromadb
+
+import sys
 import argparse
+import chromadb
+from pathlib import Path
 from chromadb.utils import embedding_functions
 
-# 1. Setup the DB Connection (pointing to your existing rag folder)
-client = chromadb.PersistentClient(path="../rag/chroma_db")
-emb_fn = embedding_functions.OllamaEmbeddingFunction(
-    model_name="mxbai-embed-large",
-    url="http://localhost:11434/api/embeddings",
-)
-collection = client.get_collection(name="docs", embedding_function=emb_fn)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import config  # pyright: ignore[reportMissingImports]
 
-def quick_search(query, n=5):
-    # Mandatory prefix for mxbai accuracy
-    query_with_prefix = f"Represent this sentence for searching relevant passages: {query}"
-    
-    print(f"\n🔍 Searching for: '{query}'...")
+DB_PATH = Path(__file__).resolve().parent / "chroma_db"
+
+client = chromadb.PersistentClient(path=str(DB_PATH))
+emb_fn = embedding_functions.OllamaEmbeddingFunction(
+    model_name=config.EMBED_MODEL,
+    url=f"{config.OLLAMA_URL}/api/embeddings",
+)
+collection = client.get_collection(name=config.COLLECTION, embedding_function=emb_fn)
+
+
+def quick_search(query: str, n: int = 5) -> None:
+    query_with_prefix = f"{config.QUERY_PREFIX}{query}"
+    print(f"\n🔍 Searching for: '{query}'  (top {n} results, model: {config.EMBED_MODEL})\n")
+
     results = collection.query(query_texts=[query_with_prefix], n_results=n)
-    
-    if not results['documents'][0]:
+
+    if not results["documents"][0]:
         print("❌ No matches found. Try a different term.")
         return
 
-    for i in range(len(results['documents'][0])):
-        content = results['documents'][0][i]
-        meta = results['metadatas'][0][i]
-        print(f"\n[{i+1}] SOURCE: {meta['source']} (Page {meta['page']})")
-        print(f"TEXT: {content[:800]}...") 
-        print("-" * 50)
+    for i, (content, meta) in enumerate(
+        zip(results["documents"][0], results["metadatas"][0]), start=1
+    ):
+        source = meta.get("source", "unknown")
+        page   = meta.get("page", "?")
+        print(f"[{i}] {source}  (Page {page})")
+        print(f"    {content[:800].strip()}")
+        print("-" * 60)
 
-# 2. Setup the Command Line Argument Parser
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search the VCF9 Encyclopedia")
-    
-    # This allows you to pass the question as a string
-    parser.add_argument("question", type=str, help="The question you want to ask your VCF9 docs")
-    
-    # Optional: Allow you to change the number of results via CLI (default is 5)
-    parser.add_argument("-n", "--results", type=int, default=5, help="Number of results to return")
-
+    parser = argparse.ArgumentParser(description="Search the VCF 9 vector index")
+    parser.add_argument("question", type=str, help="Question or keyword to search")
+    parser.add_argument("-n", "--results", type=int, default=5, help="Number of results (default: 5)")
     args = parser.parse_args()
-    
-    # Execute search with the input from the terminal
     quick_search(args.question, n=args.results)

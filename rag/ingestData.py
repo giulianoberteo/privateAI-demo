@@ -1,85 +1,105 @@
 """
-v1.0 
+v1.1
 
-This version does not have a "smart ingestion" meaninig it can't handle different document types.
+Ingests PDF and TXT documents from ./contentData/ into a ChromaDB vector store.
 
-This script ingests all the PDFs inside a folder (in my use case, a 1 big PDF file containing all the VCF 9.0 documenation) into a ChromaDB vector store for RAG applications in your MCP project.
+Changes from v1.0:
+- Switched collection.add() → upsert() so re-running the script on the same
+  files is idempotent (no duplicate-ID errors).
+- Added TXT file support alongside PDF.
+- Paths now derived from __file__ so the script can be run from any directory.
+- Final batch flush wrapped in the same error handler as mid-loop flushes.
+- Shared constants imported from config.py (model name, chunk sizes, etc.).
 
-It then uses PyMuPDF for content extraction, mxbai-embed-large via Ollama for embeddings, and recursive text splitting with batching for efficient processing.
+Key Features:
+- Processes all PDFs and TXTs in ./contentData/ with tqdm progress bars.
+- Splits pages into configurable-size chunks (default 800 chars / 100 overlap).
+- Batches upserts (default 20 chunks) to stay within Ollama memory limits.
 
-Key Features
-- Processes all PDFs in ./contentData/ with progress tracking via tqdm.
-- Splits pages into 800-character chunks (100 overlap) to optimize for embedding limits.
-- Batches additions (20 chunks max) to prevent memory issues, with robust error handling.
-
-Prerequisites
-- Ollama running locally (ollama pull mxbai-embed-large).
-- ChromaDB at ./chroma_db/ and PyMuPDF/Chroma installed.
-
+Prerequisites:
+- Ollama running locally (ollama pull mxbai-embed-large, or set EMBED_MODEL env var).
+- ChromaDB at ./chroma_db/; PyMuPDF, chromadb, and tqdm installed.
 """
 
-import pymupdf # pyright: ignore[reportMissingImports]
-import chromadb # pyright: ignore[reportMissingImports]
-import os
+import sys
+import pymupdf  # pyright: ignore[reportMissingImports]
+import chromadb  # pyright: ignore[reportMissingImports]
 from pathlib import Path
-from chromadb.utils import embedding_functions # pyright: ignore[reportMissingImports]
-from langchain_text_splitters import RecursiveCharacterTextSplitter # pyright: ignore[reportMissingImports]
-from tqdm import tqdm # pyright: ignore[reportMissingModuleSource]
+from chromadb.utils import embedding_functions  # pyright: ignore[reportMissingImports]
+from langchain_text_splitters import RecursiveCharacterTextSplitter  # pyright: ignore[reportMissingImports]
+from tqdm import tqdm  # pyright: ignore[reportMissingModuleSource]
 
-# Configure the connection to Chroma DB and the model to use
-client = chromadb.PersistentClient(path="./chroma_db")
+# Resolve config.py from the project root (one level above rag/)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import config  # pyright: ignore[reportMissingImports]
+
+# --- DB & embedding setup ---
+DB_PATH = Path(__file__).resolve().parent / "chroma_db"
+client = chromadb.PersistentClient(path=str(DB_PATH))
 emb_fn = embedding_functions.OllamaEmbeddingFunction(
-    model_name="mxbai-embed-large",
-    url="http://localhost:11434/api/embeddings",
+    model_name=config.EMBED_MODEL,
+    url=f"{config.OLLAMA_URL}/api/embeddings",
 )
+collection = client.get_or_create_collection(name=config.COLLECTION, embedding_function=emb_fn)
 
-# Define the collection name and embedding function for Chroma DB
-collection = client.get_or_create_collection(name="docs", embedding_function=emb_fn)
-
-# Define how to split the document ingestion and chunk sizes for mxbai
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=800,  # Reduced from 1200
-    chunk_overlap=100,
-    separators=["\n\n", "\n", ". ", " ", ""]
+    chunk_size=config.CHUNK_SIZE,
+    chunk_overlap=config.CHUNK_OVERLAP,
+    separators=["\n\n", "\n", ". ", " ", ""],
 )
-# Point to the directory where the documents are stored
-data_dir = Path("contentData")
+
+data_dir = Path(__file__).resolve().parent / "contentData"
 pdf_files = list(data_dir.glob("*.pdf"))
+txt_files = list(data_dir.glob("*.txt"))
+all_files = pdf_files + txt_files
 
-# Checking if there's content to process
-if not pdf_files:
-    print("❌ No PDFs found!")
-    exit()
+if not all_files:
+    print("❌ No PDF or TXT files found in contentData/")
+    sys.exit(1)
 
-# Ingestion loop with progress bars and error handling
-for pdf_path in pdf_files:
-    doc = pymupdf.open(pdf_path)
-    batch_docs, batch_metadatas, batch_ids = [], [], []
-    
-    # Reduce batch size to avoid memory issues with large documents and Mxbai's embedding limits
-    BATCH_LIMIT = 20 
+print(f"📂 Found {len(pdf_files)} PDF(s) and {len(txt_files)} TXT(s) to ingest.")
 
-    for i, page in enumerate(tqdm(doc, desc=f"Reading {pdf_path.stem}")):
-        text = page.get_text()
-        if len(text.strip()) < 20: continue
-        
-        chunks = text_splitter.split_text(text)
-        for j, chunk in enumerate(chunks):
+total_chunks = 0
+
+
+def flush_batch(docs, metas, ids):
+    """Upsert a batch and return empty lists. Exits on Ollama error."""
+    if not docs:
+        return [], [], []
+    try:
+        collection.upsert(documents=docs, metadatas=metas, ids=ids)
+    except Exception as e:
+        print(f"\n❌ Error upserting batch: {e}")
+        print(f"   Hint: is 'ollama pull {config.EMBED_MODEL}' done? Is Ollama running?")
+        sys.exit(1)
+    return [], [], []
+
+
+for file_path in all_files:
+    batch_docs, batch_metas, batch_ids = [], [], []
+
+    if file_path.suffix.lower() == ".pdf":
+        doc = pymupdf.open(file_path)
+        pages = [(i, page.get_text()) for i, page in enumerate(doc)]
+    else:  # .txt
+        raw = file_path.read_text(encoding="utf-8", errors="replace")
+        pages = [(0, raw)]  # single "page" for TXT files
+
+    for page_num, text in tqdm(pages, desc=f"Reading {file_path.name}"):
+        if len(text.strip()) < 20:
+            continue
+        for chunk_idx, chunk in enumerate(text_splitter.split_text(text)):
             batch_docs.append(chunk)
-            batch_metadatas.append({"source": pdf_path.name, "page": i + 1})
-            batch_ids.append(f"{pdf_path.stem}_p{i}_c{j}")
-            
-            if len(batch_docs) >= BATCH_LIMIT:
-                try:
-                    collection.add(documents=batch_docs, metadatas=batch_metadatas, ids=batch_ids)
-                except Exception as e:
-                    print(f"\n❌ Error adding batch: {e}")
-                    print("Hint: Check if 'ollama pull mxbai-embed-large' was run.")
-                    exit()
-                batch_docs, batch_metadatas, batch_ids = [], [], []
+            batch_metas.append({"source": file_path.name, "page": page_num + 1})
+            batch_ids.append(f"{file_path.stem}_p{page_num}_c{chunk_idx}")
 
-    # Final sweep
-    if batch_docs:
-        collection.add(documents=batch_docs, metadatas=batch_metadatas, ids=batch_ids)
+            if len(batch_docs) >= config.BATCH_LIMIT:
+                batch_docs, batch_metas, batch_ids = flush_batch(batch_docs, batch_metas, batch_ids)
+                total_chunks += config.BATCH_LIMIT
 
-print("\n✅ SUCCESS: VMware Cloud Foundation 9 docs is now indexed with Mxbai!")
+    # Flush remaining chunks for this file
+    remainder = len(batch_docs)
+    flush_batch(batch_docs, batch_metas, batch_ids)
+    total_chunks += remainder
+
+print(f"\n✅ Ingestion complete — {total_chunks} chunks indexed using {config.EMBED_MODEL}.")
