@@ -10,7 +10,7 @@ import config  # pyright: ignore[reportMissingImports]
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="VCF Architect", page_icon="🛡️", layout="wide")
-st.title("🛡️ VCF Assistant")
+st.title("🛡️ VCF Architect")
 
 
 # --- 2. DATA CONNECTIONS ---
