@@ -27,7 +27,7 @@ twice — once per version — which the LLM orchestrates automatically via MCP 
    → creates `docs_vcf91` collection.
 3. Delete the legacy `docs` collection once verified:
    ```bash
-   python -c "import chromadb; chromadb.PersistentClient('rag/chroma_db').delete_collection('docs')"
+   uv run python -c "import chromadb; chromadb.PersistentClient('rag/chroma_db').delete_collection('docs')"
    ```
 
 ### Files changed
