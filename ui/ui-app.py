@@ -29,7 +29,7 @@ with st.sidebar:
 def init_db():
     client = chromadb.PersistentClient(path=str(DB_PATH))
     emb_fn = embedding_functions.OllamaEmbeddingFunction(
-        model_name="bge-m3", 
+        model_name="mxbai-embed-large",
         url="http://localhost:11434/api/embeddings"
     )
     # Ensure collection exists before getting
