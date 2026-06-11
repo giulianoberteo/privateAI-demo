@@ -1,0 +1,22 @@
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/Users/gb003139/micromamba/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/Users/gb003139/micromamba/etc/profile.d/conda.sh" ]; then
+        . "/Users/gb003139/micromamba/etc/profile.d/conda.sh"
+    else
+        export PATH="/Users/gb003139/micromamba/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
+
+. "$HOME/.local/bin/env"
+
+```bash
+eval "$(starship init zsh)"
+```
