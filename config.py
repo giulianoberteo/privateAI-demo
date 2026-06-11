@@ -25,7 +25,7 @@ DEFAULT_VERSION = os.getenv("DEFAULT_VERSION", "9.1")
 # --- Ollama endpoints ---
 OLLAMA_URL   = os.getenv("OLLAMA_URL", "http://localhost:11434")
 EMBED_MODEL  = os.getenv("EMBED_MODEL", "mxbai-embed-large")
-LLM_MODEL    = os.getenv("LLM_MODEL",  "qwen3.5:35b-a3b")
+LLM_MODEL    = os.getenv("LLM_MODEL",  "qwen2.5:14b")
 
 # Mxbai-embed-large requires this prefix for query (not document) embeddings.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
