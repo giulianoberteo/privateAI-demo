@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 
 # --- 1. PAGE CONFIG ---
-st.set_page_config(page_title="VCF Architect", page_icon="🛡️", layout="wide")
-st.title("🛡️ VCF Architect")
+st.set_page_config(page_title="Falcon Architect / VCF Specialist", page_icon="🛡️", layout="wide")
+st.title("🚀 Falcon Architect 🔥 VCF Specialist")
 
 
 # --- 2. DATA CONNECTIONS ---
