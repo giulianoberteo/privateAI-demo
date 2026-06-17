@@ -18,7 +18,7 @@ if "theme" not in st.session_state:
 _dark = st.session_state.theme == "dark"
 st.markdown(build_css(PALETTES["dark" if _dark else "light"]), unsafe_allow_html=True)
 
-st.title("🚀 Falcon Architect 🔥 VCF Specialist")
+st.title("🚀 VCF Specialist")
 
 
 # --- 2. DATA CONNECTIONS ---
@@ -94,7 +94,7 @@ with st.sidebar:
     available_versions = sorted(config.VERSION_MAP.keys(), reverse=True)
     selected_version   = st.selectbox("VCF Version", available_versions, index=0)
 
-    st.divider()
+    ##st.divider()
 
     available_models = get_available_models()
     default_idx      = (
@@ -103,18 +103,25 @@ with st.sidebar:
     )
     selected_model = st.selectbox("Brain (LLM)", available_models, index=default_idx)
 
-    temp = st.slider("Temperature", 0.0, 1.0, 0.1)
+    _TEMP_OPTIONS = {
+        "🎯 Precise — strict factual answers":       0.1,
+        "⚖️ Balanced — clear with some flexibility": 0.4,
+        "💡 Creative — varied phrasing & synthesis": 0.7,
+        "🔥 Experimental — most diverse output":     1.0,
+    }
+    _temp_label = st.selectbox("Answer style", list(_TEMP_OPTIONS.keys()), index=0)
+    temp = _TEMP_OPTIONS[_temp_label]
 
-    st.divider()
+    ## st.divider()
 
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages       = []
         st.session_state.session_tokens = {"prompt": 0, "completion": 0}
         st.rerun()
 
-    st.info(f"Querying VCF **{selected_version}** docs.")
+    ## st.info(f"Querying VCF **{selected_version}** docs.")
 
-    st.divider()
+    ## st.divider()
     _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
     if st.button(_toggle_label, use_container_width=True):
         st.session_state.theme = "light" if _dark else "dark"
