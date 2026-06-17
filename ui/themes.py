@@ -125,7 +125,8 @@ section[data-testid="stSidebar"] > div:first-child {{
     max-width: 1400px;
     padding: 1.75rem 2.5rem 4rem;
 }}
-[data-testid="stBottom"] {{
+[data-testid="stBottom"],
+[data-testid="stBottomBlockContainer"] {{
     background-color: {v['bg_app']} !important;
 }}
 
