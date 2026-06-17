@@ -7,9 +7,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
+from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="Falcon Architect / VCF Specialist", page_icon="🛡️", layout="wide")
+
+# --- THEME ---
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+_dark = st.session_state.theme == "dark"
+st.markdown(build_css(PALETTES["dark" if _dark else "light"]), unsafe_allow_html=True)
+
 st.title("🚀 Falcon Architect 🔥 VCF Specialist")
 
 
@@ -110,6 +118,12 @@ with st.sidebar:
         st.rerun()
 
     st.info(f"Querying VCF **{selected_version}** docs only. Nothing leaves your machine.")
+
+    st.divider()
+    _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
+    if st.button(_toggle_label, use_container_width=True):
+        st.session_state.theme = "light" if _dark else "dark"
+        st.rerun()
 
     # Session token usage (shown once at least one response has been generated)
     session_t = st.session_state.get("session_tokens", {"prompt": 0, "completion": 0})

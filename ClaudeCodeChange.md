@@ -2,6 +2,39 @@
 
 ---
 
+## Change Set 5 — VMware Clarity CSS/colour theme
+
+**Date:** 2026-06-17
+**Branch:** `main`
+
+### What was added
+
+#### `ui/themes.py` (new file)
+
+Centralises all visual constants and CSS generation, matching the approach used in `personalHRAssistant/ui/themes.py`.
+
+- **`DARK` palette** — built on the Clarity Design System construction scale (hsl 198). Key values: `bg_app=#1B2B32` (construction[1000]), `bg_sidebar=#17252B` (construction[1100]), `accent=#2EC0FF` (blue[400]).
+- **`LIGHT` palette** — Clarity light surface with `bg_app=#F1F7F8` (construction[50]) and `accent=#0079AD` (blue[700]).
+- **`PALETTES`** dict — keyed by `"dark"` / `"light"` for easy lookup.
+- **`build_css(v)`** — accepts a palette dict and returns a `<style>` block covering: Streamlit CSS variable overrides, Metropolis `@font-face` declarations, app shell, typography, sidebar, buttons, text inputs, select boxes, radio buttons, slider, status widget, alerts, chat (input + message bubbles + code blocks), expanders, divider, scrollbar, and responsive breakpoints.
+
+#### `ui/static/fonts/` (new directory)
+
+18 Metropolis `.woff2` font files (weight 100–900, normal + italic), copied from `personalHRAssistant/ui/static/fonts/`. Streamlit serves these via `app/static/fonts/` at runtime.
+
+#### `ui/ui-app.py`
+
+- Imports `PALETTES, build_css` from `themes`.
+- Initialises `st.session_state.theme = "dark"` on first load.
+- Calls `st.markdown(build_css(PALETTES[...]), unsafe_allow_html=True)` immediately after `set_page_config` so the palette applies before any content renders.
+- Adds a **theme toggle button** at the bottom of the sidebar ("☀️ Light mode" / "🌙 Dark mode") that flips `session_state.theme` and calls `st.rerun()`.
+
+#### `README.md`
+
+Added **VMware Clarity theme** bullet to the Streamlit UI features list.
+
+---
+
 ## Change Set 4 — Token usage display in Streamlit UI
 
 **Date:** 2026-06-10  
