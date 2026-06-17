@@ -92,12 +92,7 @@ with st.sidebar:
     st.header("Settings")
 
     available_versions = sorted(config.VERSION_MAP.keys(), reverse=True)
-    selected_version   = st.radio(
-        "VCF Version",
-        available_versions,
-        index=0,
-        horizontal=True,
-    )
+    selected_version   = st.selectbox("VCF Version", available_versions, index=0)
 
     st.divider()
 
