@@ -117,7 +117,7 @@ with st.sidebar:
         st.session_state.session_tokens = {"prompt": 0, "completion": 0}
         st.rerun()
 
-    st.info(f"Querying VCF **{selected_version}** docs only. Nothing leaves your machine.")
+    st.info(f"Querying VCF **{selected_version}** docs.")
 
     st.divider()
     _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
@@ -172,46 +172,35 @@ def get_vcf_context(query: str, version: str):
     return "\n---\n".join(context_parts), list(dict.fromkeys(sources))
 
 
-# --- 8. CHAT UI ---
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        # Re-render token stats for assistant messages that have them
-        if message["role"] == "assistant" and "tokens" in message:
-            _token_caption(message["tokens"])
-
-if prompt := st.chat_input(f"Ask about VCF {selected_version} deployment, networking, or storage..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
+# --- 8. RESPONSE GENERATOR ---
+def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
+    """Stream an assistant response and append it to session messages."""
     with st.chat_message("assistant"):
-        with st.status(f"Consulting VCF {selected_version} library...") as status:
-            context, source_list = get_vcf_context(prompt, selected_version)
+        with st.status(f"Consulting VCF {version} library...") as status:
+            context, source_list = get_vcf_context(user_prompt, version)
             st.write("**References found:**")
             for s in source_list:
                 st.write(f"- {s}")
             status.update(label="Analysing data...", state="complete")
 
         system_prompt = (
-            f"You are a Senior VCF {selected_version} Architect. "
+            f"You are a Senior VCF {version} Architect. "
             "Use the provided documentation snippets to answer. "
             "Quote specific hardware specs or CLI commands exactly as they appear. "
             "If the answer is not in the documentation, say so clearly. "
-            f"\n\nCONTEXT FROM VCF {selected_version} MANUALS:\n{context}"
+            f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
         )
 
         ollama_messages = [{"role": "system", "content": system_prompt}]
         ollama_messages.extend(st.session_state.messages)
 
         response = ollama.chat(
-            model=selected_model,
+            model=model,
             messages=ollama_messages,
-            options={"temperature": temp, "num_ctx": config.NUM_CTX},
+            options={"temperature": temperature, "num_ctx": config.NUM_CTX},
             stream=True,
         )
 
-        # Stream response — capture last chunk for token stats
         full_response = ""
         last_chunk    = None
         placeholder   = st.empty()
@@ -223,7 +212,6 @@ if prompt := st.chat_input(f"Ask about VCF {selected_version} deployment, networ
             last_chunk = chunk
         placeholder.markdown(full_response)
 
-        # Extract token stats from the final done=True chunk
         prompt_tokens     = _chunk_stat(last_chunk, "prompt_eval_count")
         completion_tokens = _chunk_stat(last_chunk, "eval_count")
         eval_duration_ns  = _chunk_stat(last_chunk, "eval_duration")
@@ -239,7 +227,6 @@ if prompt := st.chat_input(f"Ask about VCF {selected_version} deployment, networ
         }
         _token_caption(tokens)
 
-        # Accumulate into session total
         st.session_state.session_tokens["prompt"]     += prompt_tokens
         st.session_state.session_tokens["completion"] += completion_tokens
 
@@ -248,3 +235,42 @@ if prompt := st.chat_input(f"Ask about VCF {selected_version} deployment, networ
         "content": full_response,
         "tokens":  tokens,
     })
+
+
+# --- 9. CHAT UI ---
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant" and "tokens" in message:
+            _token_caption(message["tokens"])
+
+# Retry button — shown only after the last assistant message.
+# Pops it and regenerates with whatever temperature is currently set on the slider.
+if (
+    st.session_state.messages
+    and st.session_state.messages[-1]["role"] == "assistant"
+):
+    if st.button("↺  Regenerate", key="retry_btn"):
+        st.session_state.messages.pop()
+        st.session_state.pending_retry = True
+        st.rerun()
+
+# Execute a pending retry: session messages now end with the user question.
+if (
+    st.session_state.get("pending_retry")
+    and st.session_state.messages
+    and st.session_state.messages[-1]["role"] == "user"
+):
+    st.session_state.pending_retry = False
+    _generate_response(
+        st.session_state.messages[-1]["content"],
+        selected_version,
+        selected_model,
+        temp,
+    )
+
+if prompt := st.chat_input(f"Ask about VCF {selected_version} deployment, networking, or storage..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    _generate_response(prompt, selected_version, selected_model, temp)

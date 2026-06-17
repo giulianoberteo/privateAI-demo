@@ -2,6 +2,28 @@
 
 ---
 
+## Change Set 6 — Regenerate button
+
+**Date:** 2026-06-17
+**Branch:** `main`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+**`_generate_response(user_prompt, version, model, temperature)`** (new function)  
+Extracted the streaming + token-stats logic that was previously inlined inside the chat input handler into a standalone function. Both the normal chat input path and the new retry path call this function, eliminating code duplication.
+
+**Regenerate button**  
+A `↺ Regenerate` button is rendered immediately after the last assistant message whenever it is the most recent item in `st.session_state.messages`. It is never shown for historical messages mid-conversation.
+
+Clicking it:
+1. Pops the last assistant message from `st.session_state.messages`.
+2. Sets `st.session_state.pending_retry = True` and calls `st.rerun()`.
+3. On the next render the `pending_retry` guard detects that the last message is now the user question, clears the flag, and calls `_generate_response()` with the **current** temperature from the sidebar slider — so adjusting the slider before clicking retry produces a differently-sampled answer.
+
+---
+
 ## Change Set 5 — VMware Clarity CSS/colour theme
 
 **Date:** 2026-06-17
