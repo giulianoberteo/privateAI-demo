@@ -372,20 +372,25 @@ section[data-testid="stSidebar"] h3 {{
     border-top: 1px solid {v['border']};
 }}
 [data-testid="stChatInput"] > div {{
+    background-color: transparent !important;
+    border: none !important;
+}}
+[data-testid="stChatInput"] [data-baseweb="base-input"] {{
     background-color: {v['bg_input']} !important;
     border: 1px solid {v['border']} !important;
-    border-radius: 3px;
+    border-radius: 3px !important;
+    color: {v['text_primary']} !important;
 }}
-[data-testid="stChatInput"] [data-baseweb="base-input"],
 [data-testid="stChatInput"] [data-baseweb="base-input"] > div {{
     background-color: {v['bg_input']} !important;
+    border: none !important;
     color: {v['text_primary']} !important;
 }}
 [data-testid="stChatInput"] textarea,
 [data-testid="stChatInputTextArea"] {{
     background-color: {v['bg_input']} !important;
     color: {v['text_primary']} !important;
-    border-color: transparent !important;
+    border: none !important;
 }}
 [data-testid="stChatMessage"] {{
     background-color: {v['bg_card']} !important;
