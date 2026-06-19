@@ -104,10 +104,10 @@ with st.sidebar:
     selected_model = st.selectbox("Brain (LLM)", available_models, index=default_idx)
 
     _TEMP_OPTIONS = {
-        "🎯 Precise — strict factual answers":       0.1,
-        "⚖️ Balanced — clear with some flexibility": 0.4,
-        "💡 Creative — varied phrasing & synthesis": 0.7,
-        "🔥 Experimental — most diverse output":     1.0,
+        "Precise":       0.1,
+        "Balanced": 0.4,
+        "Creative": 0.7,
+        "Experimental":     1.0,
     }
     _temp_label = st.selectbox("Answer style", list(_TEMP_OPTIONS.keys()), index=0)
     temp = _TEMP_OPTIONS[_temp_label]
