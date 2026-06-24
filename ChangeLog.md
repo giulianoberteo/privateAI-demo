@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 13 — Remove border from chat message layout wrapper
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `f326d62`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Added a scoped CSS rule that strips `border` and `box-shadow` from `[data-testid="stLayoutWrapper"]` and its immediate child `div` when they appear inside a `[data-testid="stChatMessage"]`. The global `stVerticalBlockBorderWrapper > div` card rule was bleeding into the assistant response bubble's internal layout wrapper, producing a visible edge around the answer content. The new rule is scoped to the chat message context so bordered cards elsewhere in the UI are unaffected.
+
+---
+
 ## Change Set 12 — RAG pipeline optimisations, UI resilience, and config consistency
 
 **Date:** 2026-06-24
