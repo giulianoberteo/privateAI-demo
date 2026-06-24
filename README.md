@@ -248,7 +248,7 @@ uv run streamlit run ui/ui-app.py
 - **Temperature slider** — lower values (0.0–0.1) produce more deterministic, factual answers; higher values allow more creative synthesis.
 - **Clear Chat button** — resets the conversation without restarting the server.
 - **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
-- **VMware Clarity theme** — dark/light colour scheme built on the Clarity Design System construction palette with Metropolis typography. Toggle between modes with the sidebar button.
+- **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the sidebar button, which is always visible with an accent-colour outline border.
 
 ### How it works
 

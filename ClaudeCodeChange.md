@@ -2,6 +2,29 @@
 
 ---
 
+## Change Set 7 — Default light theme & button visibility fix
+
+**Date:** 2026-06-24
+**Branch:** `main`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+**Default theme changed to light**
+`st.session_state.theme` now initialises to `"light"` instead of `"dark"`. First-time visitors land in the light palette without needing to toggle.
+
+#### `ui/themes.py`
+
+**Button border added for visibility**
+All `.stButton > button` elements now carry `border: 1px solid {accent} !important` instead of `border: none`. In dark mode the bright blue outline (`#2EC0FF`) ensures the theme toggle and other sidebar buttons are always discoverable, even when the button background is transparent.
+
+#### `README.md`
+
+Updated the VMware Clarity theme bullet under Streamlit UI features to reflect the new default (light) and the outlined button behaviour.
+
+---
+
 ## Change Set 6 — Regenerate button
 
 **Date:** 2026-06-17

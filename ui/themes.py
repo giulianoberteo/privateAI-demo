@@ -212,7 +212,7 @@ section[data-testid="stSidebar"] h3 {{
 .stButton > button,
 [data-testid="stBaseButton-secondary"] {{
     background: transparent !important;
-    border: none !important;
+    border: 1px solid {v['accent']} !important;
     color: {v['accent']} !important;
     border-radius: 3px;
     font-weight: 500;

@@ -10,15 +10,15 @@ import config  # pyright: ignore[reportMissingImports]
 from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 
 # --- 1. PAGE CONFIG ---
-st.set_page_config(page_title="Falcon Architect / VCF Specialist", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="VCF vArchitect Agent", page_icon="🛡️", layout="wide")
 
 # --- THEME ---
 if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
+    st.session_state.theme = "light"
 _dark = st.session_state.theme == "dark"
 st.markdown(build_css(PALETTES["dark" if _dark else "light"]), unsafe_allow_html=True)
 
-st.title("🚀 VCF Specialist")
+st.title("🚀 VCF vArchitect Agent")
 
 
 # --- 2. DATA CONNECTIONS ---
