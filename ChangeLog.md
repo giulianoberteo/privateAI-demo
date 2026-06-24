@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 15 — Suppress all card borders inside chat message bubbles
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `053a94e`
+
+### What was changed
+
+#### `ui/themes.py`
+
+The previous fix only silenced `stLayoutWrapper`. The global `stVerticalBlockBorderWrapper > div` card rule (background, `1px solid border`, `box-shadow`) was still firing inside `stChatMessage`, producing a visible edge around the collapsed status widget content. Extended the scoped override to also cover `stVerticalBlockBorderWrapper > div` and its hover state when nested inside a chat message, resetting `border`, `box-shadow`, and `background-color` to transparent so no card edges appear within the response bubble.
+
+---
+
 ## Change Set 14 — Remove border from "Analysing data..." status widget
 
 **Date:** 2026-06-24
