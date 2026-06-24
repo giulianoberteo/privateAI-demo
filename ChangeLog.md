@@ -2,6 +2,78 @@
 
 ---
 
+## Change Set 12 — RAG pipeline optimisations, UI resilience, and config consistency
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `fb15b2d`
+
+### What was changed
+
+#### `config.py`
+
+**`QUERY_PREFIX` now env-var overridable**
+Changed from a hardcoded string to `os.getenv("QUERY_PREFIX", "...")`. If you swap `EMBED_MODEL` to a model that doesn't need an instructional prefix (e.g. `bge-m3`, `nomic-embed-text`), set `QUERY_PREFIX=""` to avoid degraded retrieval quality. Comment updated to document this.
+
+**New `MAX_DISTANCE` constant**
+Added `MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "1.0"))`. ChromaDB results whose L2 distance exceeds this threshold are excluded from LLM context, reducing noise from low-relevance chunks. Configurable via env var; a closest-match fallback ensures the LLM always receives at least one result.
+
+---
+
+#### `rag/ingestData.py`
+
+**Removed local `DB_PATH` shadow**
+The script was defining its own `DB_PATH = Path(__file__).resolve().parent / "chroma_db"` instead of using `config.DB_PATH`. While both resolved to the same path today, any future change to `config.py` would have silently diverged. Removed the local definition; the ChromaDB client now uses `config.DB_PATH` directly.
+
+---
+
+#### `mcp/server.py`
+
+**Collection handle caching**
+`_get_collection()` previously called `_chroma.get_collection()` on every MCP tool invocation. Added `_collection_cache: dict = {}` to cache collection handles by version after the first open, eliminating repeated handle creation on each tool call.
+
+**`n_results` lower bound**
+`n_results = min(n_results, 50)` had no lower bound — `n_results=0` would cause a ChromaDB error. Changed to `max(1, min(n_results, 50))`.
+
+**Distance filtering**
+`search_vcf_documentation` now unpacks `results["distances"][0]` and skips chunks whose distance exceeds `config.MAX_DISTANCE`. A fallback to the closest match is applied if all results are filtered out, so the LLM always receives at least one chunk.
+
+**Dynamic docstring**
+Removed the hardcoded `"Available: 9.0, 9.1"` from the `version` arg description — this would have become stale when adding VCF 9.2 or later. Replaced with a reference to `config.VERSION_MAP`.
+
+**`verify=False` annotation**
+Added `# noqa: S501 — lab uses self-signed cert` to the `httpx.AsyncClient` call to document why SSL verification is intentionally disabled.
+
+---
+
+#### `ui/ui-app.py`
+
+**Session state init moved to top**
+`messages` and `session_tokens` were initialised after the sidebar block that reads them, making the init effectively dead code on every version-switch rerun. All three session state keys (`theme`, `messages`, `session_tokens`) are now initialised at the very top, before `st.set_page_config`, ensuring they exist for every subsequent reference.
+
+**CSS generation cached**
+`build_css(PALETTES[...])` was called on every Streamlit rerun, regenerating ~500 lines of CSS on every user interaction. Wrapped in a `@st.cache_data` function `_get_css(theme_name: str)` keyed on the theme string — the CSS is now built once per theme per session.
+
+**`_TEMP_OPTIONS` promoted to module-level constant**
+The temperature options dict was re-created on every rerun inside the sidebar block. Moved to a module-level constant so it is evaluated once at import time.
+
+**Streaming chunk access fixed**
+`chunk["message"]["content"]` used dict-style access on `ChatResponse`, a Pydantic object returned by `ollama>=0.4`. This raises `TypeError` at runtime. Changed to the correct attribute access: `chunk.message.content`. (Note: `_chunk_stat` already handled both styles; this aligns the content access to match.)
+
+**Error handling around `ollama.chat()`**
+The entire streaming block is now wrapped in `try/except`. If Ollama is unreachable or the model is not pulled, the app renders `st.error()` with an actionable message and returns cleanly rather than showing a raw Python traceback.
+
+**Distance filtering in `get_vcf_context`**
+Aligned with the MCP server: unpacks `results["distances"][0]` and excludes chunks above `config.MAX_DISTANCE`. A closest-match fallback ensures the context string is never empty.
+
+**`DEFAULT_N + 5` magic number removed**
+The query was fetching `DEFAULT_N + 5` results with no subsequent trimming — the extra 5 were always passed to the LLM. Changed to `config.DEFAULT_N`.
+
+**Dead commented-out code removed**
+Removed the `##`-prefixed commented-out lines (`st.divider()`, `st.info()`) that had accumulated in the sidebar block.
+
+---
+
 ## Change Set 11 — PDF download links in "Prepare your documents" table
 
 **Date:** 2026-06-24
