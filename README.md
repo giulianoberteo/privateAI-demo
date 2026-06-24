@@ -168,8 +168,8 @@ Place your VCF PDF files inside `rag/contentData/`. The ingestion script automat
 
 | File | Detected version | Collection created |
 |---|---|---|
-| `vmware-cloud-foundation-9.0.pdf` | `9.0` | `docs_vcf90` |
-| `vmware-cloud-foundation-9-1.pdf` | `9.1` | `docs_vcf91` |
+| [`vmware-cloud-foundation-9.0.pdf`](https://techdocs.broadcom.com/content/dam/broadcom/techdocs/us/en/pdf/vmware/vcf/vcf-90/vmware-cloud-foundation-9-0.pdf) | `9.0` | `docs_vcf90` |
+| [`vmware-cloud-foundation-9-1.pdf`](https://techdocs.broadcom.com/content/dam/broadcom/techdocs/us/en/pdf/vmware/vcf/vcf-90/vmware-cloud-foundation-9-1.pdf) | `9.1` | `docs_vcf91` |
 
 Both files can be present at the same time — each is routed to its own collection in a single run.
 
