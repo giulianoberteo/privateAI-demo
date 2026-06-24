@@ -405,8 +405,14 @@ section[data-testid="stSidebar"] h3 {{
     border-radius: 3px;
 }}
 [data-testid="stChatMessage"] [data-testid="stLayoutWrapper"],
-[data-testid="stChatMessage"] [data-testid="stLayoutWrapper"] > div {{
+[data-testid="stChatMessage"] [data-testid="stLayoutWrapper"] > div,
+[data-testid="stChatMessage"] [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stVerticalBlockBorderWrapper"] > div:hover {{
+    background-color: transparent !important;
     box-shadow: none !important;
 }}
 [data-testid="stChatMessageContent"],
