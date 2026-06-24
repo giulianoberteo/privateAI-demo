@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 17 — Fix status widget border by targeting HTML details element
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `cfa422e`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Previous attempts used `data-testid` selectors that may not have matched what Streamlit actually renders at runtime. `st.status()` always emits a native HTML `<details>`/`<summary>` pair regardless of Streamlit version. Added direct selectors for `details`, `details > div`, and `summary` inside `[data-testid="stChatMessage"]`, stripping `border`, `outline`, and `box-shadow`. Also added `stVerticalBlockBorderWrapper` itself (not just its `> div` child) to the suppression list. Removed the now-redundant earlier attempts that targeted testids which were never matching.
+
+---
+
 ## Change Set 16 — Remove all borders from status widget inner elements
 
 **Date:** 2026-06-24
