@@ -346,10 +346,16 @@ section[data-testid="stSidebar"] h3 {{
 }}
 
 /* ── Status widget ───────────────────────────────────────── */
-[data-testid="stStatusWidget"] {{
-    background-color: {v['bg_card']} !important;
+[data-testid="stStatusWidget"],
+[data-testid="stStatusWidget"] details,
+[data-testid="stStatusWidget"] summary,
+[data-testid="stChatMessage"] [data-testid="stExpander"],
+[data-testid="stChatMessage"] [data-testid="stExpander"] details,
+[data-testid="stChatMessage"] [data-testid="stExpander"] summary {{
     border: none !important;
-    border-radius: 3px !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
 }}
 [data-testid="stStatusWidget"] p,
 [data-testid="stStatusWidget"] span {{
