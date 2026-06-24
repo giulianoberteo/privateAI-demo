@@ -346,17 +346,6 @@ section[data-testid="stSidebar"] h3 {{
 }}
 
 /* ── Status widget ───────────────────────────────────────── */
-[data-testid="stStatusWidget"],
-[data-testid="stStatusWidget"] details,
-[data-testid="stStatusWidget"] summary,
-[data-testid="stChatMessage"] [data-testid="stExpander"],
-[data-testid="stChatMessage"] [data-testid="stExpander"] details,
-[data-testid="stChatMessage"] [data-testid="stExpander"] summary {{
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background-color: transparent !important;
-}}
 [data-testid="stStatusWidget"] p,
 [data-testid="stStatusWidget"] span {{
     color: {v['text_primary']} !important;
@@ -410,10 +399,15 @@ section[data-testid="stSidebar"] h3 {{
     border: 1px solid {v['border']} !important;
     border-radius: 3px;
 }}
+[data-testid="stChatMessage"] details,
+[data-testid="stChatMessage"] details > div,
+[data-testid="stChatMessage"] summary,
 [data-testid="stChatMessage"] [data-testid="stLayoutWrapper"],
 [data-testid="stChatMessage"] [data-testid="stLayoutWrapper"] > div,
+[data-testid="stChatMessage"] [data-testid="stVerticalBlockBorderWrapper"],
 [data-testid="stChatMessage"] [data-testid="stVerticalBlockBorderWrapper"] > div {{
     border: none !important;
+    outline: none !important;
     box-shadow: none !important;
     background-color: transparent !important;
 }}
