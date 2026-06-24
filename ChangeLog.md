@@ -2,6 +2,19 @@
 
 ---
 
+## Change Set 8 — Remove chat input border
+
+**Date:** 2026-06-24
+**Branch:** `main`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Removed the `1px solid` border from `[data-testid="stChatInput"] [data-baseweb="base-input"]`. The textarea now blends cleanly into the bottom bar without a visible box outline.
+
+---
+
 ## Change Set 7 — Default light theme & button visibility fix
 
 **Date:** 2026-06-24

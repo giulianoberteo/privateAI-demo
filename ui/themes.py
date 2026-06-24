@@ -377,7 +377,7 @@ section[data-testid="stSidebar"] h3 {{
 }}
 [data-testid="stChatInput"] [data-baseweb="base-input"] {{
     background-color: {v['bg_input']} !important;
-    border: 1px solid {v['border']} !important;
+    border: none !important;
     border-radius: 3px !important;
     color: {v['text_primary']} !important;
 }}
