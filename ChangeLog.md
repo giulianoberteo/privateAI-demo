@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 14 — Remove border from "Analysing data..." status widget
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `2d8b5af`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Changed `border: 1px solid {v['border']}` to `border: none` on the `[data-testid="stStatusWidget"]` rule. The `st.status()` widget that shows "Consulting VCF library…" / "Analysing data…" was rendering with a visible outline that clashed visually inside the chat message bubble.
+
+---
+
 ## Change Set 13 — Remove border from chat message layout wrapper
 
 **Date:** 2026-06-24
