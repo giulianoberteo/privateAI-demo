@@ -348,7 +348,7 @@ section[data-testid="stSidebar"] h3 {{
 /* ── Status widget ───────────────────────────────────────── */
 [data-testid="stStatusWidget"] {{
     background-color: {v['bg_card']} !important;
-    border: 1px solid {v['border']} !important;
+    border: none !important;
     border-radius: 3px !important;
 }}
 [data-testid="stStatusWidget"] p,
