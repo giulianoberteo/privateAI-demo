@@ -301,6 +301,11 @@ uv run streamlit run ui/ui-app.py
 
 </details>
 
+![streamlit-ui-startup](screenshots/standalone-AI-agent-app-startup.png "Streamlit UI start-up")
+
+And here is the AI Chat app running locally, with the version selector and model dropdown in the sidebar, answering a VCF 9 question with references to the source documentation:
+![streamlit-chat](screenshots/standalone-AI-agent-app.png "Streamlit Standalone AI Agent Chat")
+
 ## Features
 
 - **Version selector** in the sidebar — pin to VCF 9.0 or 9.1 (or any version you've ingested). Switching version automatically clears the chat history to prevent cross-version context bleed.
