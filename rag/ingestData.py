@@ -37,8 +37,6 @@ from tqdm import tqdm  # pyright: ignore[reportMissingModuleSource]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 
-DB_PATH = Path(__file__).resolve().parent / "chroma_db"
-
 
 def version_from_filename(filename: str) -> str | None:
     """Extract VCF version string (e.g. '9.1') from a filename.
@@ -58,7 +56,7 @@ def version_from_filename(filename: str) -> str | None:
 
 
 # --- DB & embedding setup ---
-client = chromadb.PersistentClient(path=str(DB_PATH))
+client = chromadb.PersistentClient(path=str(config.DB_PATH))
 emb_fn = embedding_functions.OllamaEmbeddingFunction(
     model_name=config.EMBED_MODEL,
     url=f"{config.OLLAMA_URL}/api/embeddings",

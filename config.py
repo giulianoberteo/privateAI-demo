@@ -27,8 +27,10 @@ OLLAMA_URL   = os.getenv("OLLAMA_URL", "http://localhost:11434")
 EMBED_MODEL  = os.getenv("EMBED_MODEL", "mxbai-embed-large")
 LLM_MODEL    = os.getenv("LLM_MODEL",  "qwen2.5:14b")
 
-# Mxbai-embed-large requires this prefix for query (not document) embeddings.
-QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+# mxbai-embed-large requires this prefix for query (not document) embeddings.
+# If switching EMBED_MODEL to a model that doesn't use instructional prefixes,
+# set QUERY_PREFIX="" via env var to avoid degraded retrieval quality.
+QUERY_PREFIX = os.getenv("QUERY_PREFIX", "Represent this sentence for searching relevant passages: ")
 
 # --- Ingestion tuning ---
 CHUNK_SIZE    = int(os.getenv("CHUNK_SIZE",    "800"))
@@ -40,3 +42,8 @@ DEFAULT_N = int(os.getenv("DEFAULT_N", "20"))
 
 # --- Ollama inference ---
 NUM_CTX = int(os.getenv("NUM_CTX", "32768"))
+
+# --- RAG quality ---
+# Maximum L2 distance for ChromaDB results; chunks above this threshold are
+# excluded from LLM context. Raise or set to inf to disable filtering.
+MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "1.0"))

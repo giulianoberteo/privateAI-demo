@@ -44,15 +44,21 @@ except Exception as e:
         f"Run rag/ingestData.py first to build the index.\nOriginal error: {e}"
     ) from e
 
+_collection_cache: dict = {}
+
 
 def _get_collection(version: str):
-    """Return the ChromaDB collection for the requested VCF version."""
+    """Return the ChromaDB collection for the requested VCF version (cached)."""
+    if version in _collection_cache:
+        return _collection_cache[version]
     if version not in config.VERSION_MAP:
         available = ", ".join(sorted(config.VERSION_MAP))
         raise ValueError(f"Unknown version '{version}'. Available: {available}")
     col_name = config.VERSION_MAP[version]
     try:
-        return _chroma.get_collection(name=col_name, embedding_function=_emb_fn)
+        col = _chroma.get_collection(name=col_name, embedding_function=_emb_fn)
+        _collection_cache[version] = col
+        return col
     except Exception:
         raise ValueError(
             f"Collection '{col_name}' for VCF {version} does not exist. "
@@ -73,28 +79,42 @@ def search_vcf_documentation(
     guaranteed to contain only content from the requested version.
 
     For comparison questions (e.g. "what changed in 9.1?"), call this tool
-    twice — once with version='9.0' and once with version='9.1' — then
-    synthesise the two result sets.
+    twice — once per version — then synthesise the two result sets.
 
     Args:
         query:     Technical question or topic to search.
-        version:   VCF version to query. Available: 9.0, 9.1. Defaults to 9.1.
-        n_results: Number of chunks to retrieve (default 20, max 50).
+        version:   VCF version to query. Defaults to the configured default version.
+                   Check config.VERSION_MAP for available versions.
+        n_results: Number of chunks to retrieve (default from config, max 50).
     """
     collection = _get_collection(version)
-    n_results  = min(n_results, 50)
+    n_results  = max(1, min(n_results, 50))
 
     results = collection.query(
         query_texts=[f"{config.QUERY_PREFIX}{query}"],
         n_results=n_results,
     )
 
+    docs  = results["documents"][0]
+    metas = results["metadatas"][0]
+    dists = results["distances"][0]
+
     output = []
-    for text, meta in zip(results["documents"][0], results["metadatas"][0]):
+    for text, meta, dist in zip(docs, metas, dists):
+        if dist > config.MAX_DISTANCE:
+            continue
         source = meta.get("source", "unknown")
         page   = meta.get("page", "?")
         ver    = meta.get("version", version)
         output.append(f"[VCF {ver} | {source} | Page {page}]\n{text}")
+
+    # If the distance threshold filtered everything, fall back to the closest match
+    if not output and docs:
+        meta = metas[0]
+        output.append(
+            f"[VCF {meta.get('version', version)} | {meta.get('source', 'unknown')} "
+            f"| Page {meta.get('page', '?')}]\n{docs[0]}"
+        )
 
     return "\n\n---\n\n".join(output)
 
@@ -114,7 +134,7 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
 
     headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
 
-    async with httpx.AsyncClient(verify=False) as http:
+    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
         try:
             response = await http.get(f"{vcf_ops_url}?severity={severity}", headers=headers)
             response.raise_for_status()

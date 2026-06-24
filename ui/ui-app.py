@@ -9,19 +9,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 
+# --- CONSTANTS ---
+_TEMP_OPTIONS = {
+    "Precise":      0.1,
+    "Balanced":     0.4,
+    "Creative":     0.7,
+    "Experimental": 1.0,
+}
+
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="VCF vArchitect Agent", page_icon="🛡️", layout="wide")
 
-# --- THEME ---
+# --- 2. SESSION STATE INIT ---
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "session_tokens" not in st.session_state:
+    st.session_state.session_tokens = {"prompt": 0, "completion": 0}
+
+# --- THEME ---
 _dark = st.session_state.theme == "dark"
-st.markdown(build_css(PALETTES["dark" if _dark else "light"]), unsafe_allow_html=True)
-
-st.title("🚀 VCF vArchitect Agent")
 
 
-# --- 2. DATA CONNECTIONS ---
+@st.cache_data
+def _get_css(theme_name: str) -> str:
+    return build_css(PALETTES[theme_name])
+
+
+st.markdown(_get_css("dark" if _dark else "light"), unsafe_allow_html=True)
+
+st.title("🦅 Hawk - VCF vArchitect Agent")
+
+
+# --- 3. DATA CONNECTIONS ---
 @st.cache_resource
 def _init_chroma():
     """Single ChromaDB client + embedding function shared across all version collections."""
@@ -59,7 +80,7 @@ def get_available_models():
         return [config.LLM_MODEL, "qwen2.5:32b"]
 
 
-# --- 3. TOKEN HELPERS ---
+# --- 4. TOKEN HELPERS ---
 def _chunk_stat(chunk, key: str) -> int:
     """Safely read an integer stat from an Ollama streaming chunk (dict or object)."""
     try:
@@ -87,14 +108,12 @@ def _token_caption(tokens: dict) -> None:
         st.caption("  ·  ".join(parts))
 
 
-# --- 4. SIDEBAR ---
+# --- 5. SIDEBAR ---
 with st.sidebar:
     st.header("Settings")
 
     available_versions = sorted(config.VERSION_MAP.keys(), reverse=True)
     selected_version   = st.selectbox("VCF Version", available_versions, index=0)
-
-    ##st.divider()
 
     available_models = get_available_models()
     default_idx      = (
@@ -103,32 +122,20 @@ with st.sidebar:
     )
     selected_model = st.selectbox("Brain (LLM)", available_models, index=default_idx)
 
-    _TEMP_OPTIONS = {
-        "Precise":       0.1,
-        "Balanced": 0.4,
-        "Creative": 0.7,
-        "Experimental":     1.0,
-    }
     _temp_label = st.selectbox("Answer style", list(_TEMP_OPTIONS.keys()), index=0)
     temp = _TEMP_OPTIONS[_temp_label]
-
-    ## st.divider()
 
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages       = []
         st.session_state.session_tokens = {"prompt": 0, "completion": 0}
         st.rerun()
 
-    ## st.info(f"Querying VCF **{selected_version}** docs.")
-
-    ## st.divider()
     _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
     if st.button(_toggle_label, use_container_width=True):
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
 
-    # Session token usage (shown once at least one response has been generated)
-    session_t = st.session_state.get("session_tokens", {"prompt": 0, "completion": 0})
+    session_t     = st.session_state.session_tokens
     session_total = session_t["prompt"] + session_t["completion"]
     if session_total > 0:
         st.divider()
@@ -140,18 +147,11 @@ with st.sidebar:
         )
 
 
-# --- 5. AUTO-CLEAR ON VERSION SWITCH ---
+# --- 6. AUTO-CLEAR ON VERSION SWITCH ---
 if st.session_state.get("active_version") != selected_version:
     st.session_state.messages       = []
     st.session_state.session_tokens = {"prompt": 0, "completion": 0}
     st.session_state.active_version = selected_version
-
-
-# --- 6. SESSION STATE INIT ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "session_tokens" not in st.session_state:
-    st.session_state.session_tokens = {"prompt": 0, "completion": 0}
 
 
 # --- 7. RAG ENGINE ---
@@ -160,16 +160,31 @@ def get_vcf_context(query: str, version: str):
     instructional_query = f"{config.QUERY_PREFIX}{query}"
     results             = collection.query(
         query_texts=[instructional_query],
-        n_results=config.DEFAULT_N + 5,
+        n_results=config.DEFAULT_N,
     )
 
+    docs  = results["documents"][0]
+    metas = results["metadatas"][0]
+    dists = results["distances"][0]
+
     context_parts, sources = [], []
-    for text, meta in zip(results["documents"][0], results["metadatas"][0]):
+    for text, meta, dist in zip(docs, metas, dists):
+        if dist > config.MAX_DISTANCE:
+            continue
         page      = meta.get("page", "?")
         file_name = meta.get("source", "Manual")
         ver       = meta.get("version", version)
         context_parts.append(f"[VCF {ver} | {file_name} | Page {page}]\n{text}")
         sources.append(f"VCF {ver} — {file_name} (Pg. {page})")
+
+    # If the distance threshold filtered everything, fall back to the closest match
+    if not context_parts and docs:
+        meta = metas[0]
+        ver  = meta.get("version", version)
+        context_parts.append(
+            f"[VCF {ver} | {meta.get('source', 'Manual')} | Page {meta.get('page', '?')}]\n{docs[0]}"
+        )
+        sources.append(f"VCF {ver} — {meta.get('source', 'Manual')} (Pg. {meta.get('page', '?')})")
 
     return "\n---\n".join(context_parts), list(dict.fromkeys(sources))
 
@@ -196,23 +211,31 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
         ollama_messages = [{"role": "system", "content": system_prompt}]
         ollama_messages.extend(st.session_state.messages)
 
-        response = ollama.chat(
-            model=model,
-            messages=ollama_messages,
-            options={"temperature": temperature, "num_ctx": config.NUM_CTX},
-            stream=True,
-        )
+        try:
+            response = ollama.chat(
+                model=model,
+                messages=ollama_messages,
+                options={"temperature": temperature, "num_ctx": config.NUM_CTX},
+                stream=True,
+            )
 
-        full_response = ""
-        last_chunk    = None
-        placeholder   = st.empty()
-        for chunk in response:
-            token = chunk["message"]["content"]
-            if token:
-                full_response += token
-                placeholder.markdown(full_response + "▌")
-            last_chunk = chunk
-        placeholder.markdown(full_response)
+            full_response = ""
+            last_chunk    = None
+            placeholder   = st.empty()
+            for chunk in response:
+                token = chunk.message.content
+                if token:
+                    full_response += token
+                    placeholder.markdown(full_response + "▌")
+                last_chunk = chunk
+            placeholder.markdown(full_response)
+
+        except Exception as e:
+            st.error(
+                f"**Ollama error:** {e}  \n"
+                f"Is Ollama running with `{model}` pulled?"
+            )
+            return
 
         prompt_tokens     = _chunk_stat(last_chunk, "prompt_eval_count")
         completion_tokens = _chunk_stat(last_chunk, "eval_count")
@@ -247,7 +270,6 @@ for message in st.session_state.messages:
             _token_caption(message["tokens"])
 
 # Retry button — shown only after the last assistant message.
-# Pops it and regenerates with whatever temperature is currently set on the slider.
 if (
     st.session_state.messages
     and st.session_state.messages[-1]["role"] == "assistant"
