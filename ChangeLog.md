@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 16 — Remove all borders from status widget inner elements
+
+**Date:** 2026-06-24
+**Branch:** `main`
+**Commit:** `79c3a35`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Streamlit's native stylesheet applies a border to the `<details>` and `<summary>` elements that `st.status()` renders internally, not just the outer `[data-testid="stStatusWidget"]` div. Previous fixes targeted the outer container but left the inner elements unstyled. Extended the suppression rule to cover `stStatusWidget details`, `stStatusWidget summary`, `stExpander` inside `stChatMessage`, and their inner `details`/`summary` elements — resetting `border`, `outline`, and `box-shadow` to `none` on all of them.
+
+---
+
 ## Change Set 15 — Suppress all card borders inside chat message bubbles
 
 **Date:** 2026-06-24
