@@ -2,6 +2,19 @@
 
 ---
 
+## Change Set 11 — PDF download links in "Prepare your documents" table
+
+**Date:** 2026-06-24
+**Branch:** `main`
+
+### What was changed
+
+#### `README.md`
+
+Linked the two filenames in the "Prepare your documents" table to their direct Broadcom TechDocs PDF download URLs, so readers can grab the files straight from the README.
+
+---
+
 ## Change Set 10 — Collapsible code blocks in README
 
 **Date:** 2026-06-24
