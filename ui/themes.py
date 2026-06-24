@@ -391,6 +391,13 @@ section[data-testid="stSidebar"] h3 {{
     background-color: {v['bg_input']} !important;
     color: {v['text_primary']} !important;
     border: none !important;
+    min-height: 3rem !important;
+    max-height: 8rem !important;
+}}
+[data-testid="stChatInput"] [data-baseweb="base-input"],
+[data-testid="stChatInput"] > div > div {{
+    max-width: 100% !important;
+    width: 100% !important;
 }}
 [data-testid="stChatMessage"] {{
     background-color: {v['bg_card']} !important;

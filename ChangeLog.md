@@ -2,6 +2,19 @@
 
 ---
 
+## Change Set 9 — Wider and taller chat input textarea
+
+**Date:** 2026-06-24
+**Branch:** `main`
+
+### What was changed
+
+#### `ui/themes.py`
+
+Set `min-height: 3rem` (≈ 2 visible lines) and `max-height: 8rem` on the chat textarea so it starts taller and auto-grows up to ~4 lines before scrolling. Also forced `width: 100%` on the input wrapper to ensure the field uses the full available width.
+
+---
+
 ## Change Set 8 — Remove chat input border
 
 **Date:** 2026-06-24
