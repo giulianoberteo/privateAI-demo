@@ -11,6 +11,9 @@ All commands and code snippets are based on Apple Silicon with macOS. If you're 
 
 # Quick Start
 
+<details>
+<summary>Show commands</summary>
+
 ```bash
 # 1. Install Ollama and pull the models
 curl -fsSL https://ollama.com/install.sh | sh
@@ -31,6 +34,8 @@ uv run streamlit run ui/ui-app.py
 # 4b. Or start the MCP server (for Claude Desktop / Cherry Studio / etc.)
 uv run mcp/server.py
 ```
+
+</details>
 
 ---
 
@@ -71,13 +76,22 @@ Beyond the custom web interface, the knowledge base is also exposed via the Mode
 # Part 1: Prepare the Engine
 
 ## Install Ollama
+
+<details>
+<summary>Show command</summary>
+
 ```shell
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
+</details>
+
 ## Pull the models
 
 Two models work together here — a **Librarian** (embeddings) and a **Brain** (reasoning):
+
+<details>
+<summary>Show commands</summary>
 
 ```shell
 # The Librarian — converts text to vectors for semantic search
@@ -87,6 +101,8 @@ ollama pull mxbai-embed-large
 ollama pull qwen3.5:35b-a3b
 ```
 
+</details>
+
 > **Optional upgrade:** `bge-m3` is the current best-in-class local embedding model for large technical libraries (8k context window, hybrid dense+sparse retrieval). See [Considerations](#considerations-and-next-steps) for how to switch.
 
 ---
@@ -94,27 +110,51 @@ ollama pull qwen3.5:35b-a3b
 # Part 2: Setup the Project
 
 Install uv (fast Python package manager):
+
+<details>
+<summary>Show command</summary>
+
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+</details>
+
 Restart the shell session, or run:
+
+<details>
+<summary>Show command</summary>
+
 ```shell
 source $HOME/.local/bin/env          # sh, bash, zsh
 source $HOME/.local/bin/env.fish     # fish
 ```
 
+</details>
+
 Clone or create the project folder:
+
+<details>
+<summary>Show commands</summary>
+
 ```shell
 git clone <repo-url> privateAI-demo
 cd privateAI-demo
 uv python pin 3.12
 ```
 
+</details>
+
 Install all dependencies in one command (reads from `pyproject.toml`):
+
+<details>
+<summary>Show command</summary>
+
 ```shell
 uv sync
 ```
+
+</details>
 
 > All dependencies — `chromadb`, `fastmcp`, `httpx`, `langchain-text-splitters`, `ollama`, `pymupdf`, `pypdf`, `streamlit`, `tqdm` — are declared in `pyproject.toml` and installed by `uv sync`.
 
@@ -135,9 +175,14 @@ Both files can be present at the same time — each is routed to its own collect
 
 ## Run the ingestion
 
+<details>
+<summary>Show command</summary>
+
 ```shell
 uv run rag/ingestData.py
 ```
+
+</details>
 
 The script will:
 1. Detect VCF version(s) from the filename(s).
@@ -152,10 +197,15 @@ The script will:
 
 Use the CLI search utility to run a quick vector query without starting the full UI:
 
+<details>
+<summary>Show commands</summary>
+
 ```shell
 uv run rag/testSearch.py "stretch cluster design decisions"
 uv run rag/testSearch.py "NSX configuration" --version 9.1 -n 10
 ```
+
+</details>
 
 ---
 
@@ -193,6 +243,9 @@ Open the configuration file:
 
 Add the MCP server entry below, replacing `/Users/YOUR_USERNAME/` with your actual home directory:
 
+<details>
+<summary>Show configuration</summary>
+
 ```json
 {
   "mcpServers": {
@@ -208,6 +261,8 @@ Add the MCP server entry below, replacing `/Users/YOUR_USERNAME/` with your actu
   }
 }
 ```
+
+</details>
 
 > The `--directory` must point to the `privateAI-demo/` project root (where `pyproject.toml` lives) so `uv` picks up the correct virtual environment.
 
@@ -237,19 +292,20 @@ Prompt: **are you getting this information from the internet ?**
 
 The Streamlit app provides a full chat interface that talks directly to ChromaDB and Ollama — no internet, no external API calls.
 
+<details>
+<summary>Show command</summary>
+
 ```shell
 uv run streamlit run ui/ui-app.py
 ```
-![streamlit-ui-startup](screenshots/standalone-AI-agent-app-startup.png "Streamlit UI start-up")
 
-And here is the AI Chat app running locally, with the version selector and model dropdown in the sidebar, answering a VCF 9 question with references to the source documentation:
-![streamlit-chat](screenshots/standalone-AI-agent-app.png "Streamlit Standalone AI Agent Chat")
+</details>
 
 ## Features
 
 - **Version selector** in the sidebar — pin to VCF 9.0 or 9.1 (or any version you've ingested). Switching version automatically clears the chat history to prevent cross-version context bleed.
 - **Dynamic model list** — the Brain dropdown is populated live from `ollama list`, so any model you've pulled appears automatically.
-- **Temperature slider** — lower values (0.0–0.1) produce more deterministic, factual answers; higher values allow more creative synthesis.
+- **Answer style** — choose between Precise, Balanced, Creative, and Experimental to control how deterministic or creative the answers are.
 - **Clear Chat button** — resets the conversation without restarting the server.
 - **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
 - **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the sidebar button, which is always visible with an accent-colour outline border.
@@ -289,9 +345,14 @@ All tuneable parameters live in [`config.py`](config.py) at the project root. Ev
 
 Example — switch the embedding model for a single ingest run without editing any file:
 
+<details>
+<summary>Show command</summary>
+
 ```shell
 EMBED_MODEL=bge-m3 uv run rag/ingestData.py
 ```
+
+</details>
 
 ---
 
@@ -308,6 +369,9 @@ Standard 800-character chunks can be too granular — causing the AI to lose the
 - **Built for large technical libraries** — consistently outperforms `mxbai-embed-large` on recall across 8,000+ page corpora.
 
 ## How to switch to BGE-M3
+
+<details>
+<summary>Show commands</summary>
 
 ```bash
 # 1. Pull the new engine
@@ -326,6 +390,8 @@ print('All collections deleted.')
 EMBED_MODEL=bge-m3 uv run rag/ingestData.py
 ```
 
+</details>
+
 The Streamlit UI and MCP server will pick up `EMBED_MODEL=bge-m3` automatically if you add it to your shell environment or a `.env` file.
 
 ## Multi-version support
@@ -333,13 +399,20 @@ The Streamlit UI and MCP server will pick up `EMBED_MODEL=bge-m3` automatically 
 The project is designed to grow with new VCF releases. To add a future version (e.g. 9.2):
 
 1. Add one entry to `VERSION_MAP` in `config.py`:
-   ```python
-   VERSION_MAP = {
-       "9.0": "docs_vcf90",
-       "9.1": "docs_vcf91",
-       "9.2": "docs_vcf92",   # ← add this
-   }
-   ```
+
+<details>
+<summary>Show code</summary>
+
+```python
+VERSION_MAP = {
+    "9.0": "docs_vcf90",
+    "9.1": "docs_vcf91",
+    "9.2": "docs_vcf92",   # ← add this
+}
+```
+
+</details>
+
 2. Place the new PDF in `rag/contentData/` and run `uv run rag/ingestData.py`.
 
 The UI version selector and MCP tool version parameter will include the new version automatically.

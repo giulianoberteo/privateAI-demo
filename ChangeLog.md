@@ -2,6 +2,19 @@
 
 ---
 
+## Change Set 10 — Collapsible code blocks in README
+
+**Date:** 2026-06-24
+**Branch:** `main`
+
+### What was changed
+
+#### `README.md`
+
+Wrapped every code block in `<details>`/`<summary>` HTML tags so readers can expand or collapse them on demand. Works natively on GitHub and most Markdown renderers that support inline HTML. No change to the actual commands or content.
+
+---
+
 ## Change Set 9 — Wider and taller chat input textarea
 
 **Date:** 2026-06-24
