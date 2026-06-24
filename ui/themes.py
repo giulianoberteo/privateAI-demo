@@ -404,6 +404,11 @@ section[data-testid="stSidebar"] h3 {{
     border: 1px solid {v['border']} !important;
     border-radius: 3px;
 }}
+[data-testid="stChatMessage"] [data-testid="stLayoutWrapper"],
+[data-testid="stChatMessage"] [data-testid="stLayoutWrapper"] > div {{
+    border: none !important;
+    box-shadow: none !important;
+}}
 [data-testid="stChatMessageContent"],
 [data-testid="stChatMessageContent"] p,
 [data-testid="stChatMessageContent"] li,
