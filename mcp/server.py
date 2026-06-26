@@ -141,18 +141,29 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
 
 # --- Tool 2: VCF Operations live alerts ---
 @mcp.tool()
-async def get_lab_alerts(severity: str = "CRITICAL") -> str:
+async def get_lab_alerts(
+    severity: str = "CRITICAL",
+    username: str = "",
+    password: str = "",
+) -> str:
     """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
-    Authentication (pick one):
-      - VCF_OPS_USER + VCF_OPS_PASS  — auto-acquires an OpsToken (recommended)
-      - VCF_OPS_TOKEN                 — pre-acquired token used as Basic auth fallback
+    If username and password are not supplied, they are read from the
+    VCF_OPS_USER and VCF_OPS_PASS environment variables. If neither is
+    available, ask the user for their Aria Ops username and password before
+    calling this tool.
 
     VCF_OPS_URL must be the Aria Ops base URL, e.g. https://vcf-ops.lab.local
+
+    Args:
+        severity: Alert criticality to filter on. One of: CRITICAL, IMMEDIATE,
+                  WARNING, INFORMATION. Defaults to CRITICAL.
+        username: Aria Ops username (e.g. admin@local). Ask the user if not known.
+        password: Aria Ops password. Ask the user if not known.
     """
     base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
-    user     = os.getenv("VCF_OPS_USER", "")
-    password = os.getenv("VCF_OPS_PASS", "")
+    user     = username or os.getenv("VCF_OPS_USER", "")
+    password = password or os.getenv("VCF_OPS_PASS", "")
     token    = os.getenv("VCF_OPS_TOKEN", "")
 
     if not user and not token:
