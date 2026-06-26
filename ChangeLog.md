@@ -2,6 +2,28 @@
 
 ---
 
+## Change Set 19 — Auto token acquisition for get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `ccaf946`
+
+### What was changed
+
+#### `mcp/server.py`
+
+**`_acquire_ops_token(base_url, user, password)`** (new internal helper)
+POSTs to `/suite-api/api/auth/token/acquire` with username and password, returns an `OpsToken`, and caches it in a module-level variable for the server's lifetime. Subsequent calls return the cached token without hitting the network again.
+
+**`get_lab_alerts` updated**
+Now accepts two authentication modes:
+- **Recommended:** set `VCF_OPS_USER` + `VCF_OPS_PASS` — the server acquires and caches an `OpsToken` automatically. No manual base64 encoding required.
+- **Fallback:** set `VCF_OPS_TOKEN` — used as a `Basic` auth header (previous behaviour, kept for backward compat).
+
+`VCF_OPS_URL` is now the Aria Ops **base URL** (e.g. `https://vcf-ops.lab.local`) so both the token endpoint and the alerts endpoint are derived from it. The alerts URL becomes `{base_url}/suite-api/api/alerts`.
+
+---
+
 ## Change Set 18 — Fix two bugs in get_lab_alerts
 
 **Date:** 2026-06-27
