@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 20 — Interactive credential prompting in get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `429919a`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Added `username` and `password` as explicit optional parameters to `get_lab_alerts`. The tool docstring instructs Claude to ask the user for these values if they are not already known. When provided, they override the `VCF_OPS_USER` / `VCF_OPS_PASS` env vars. This means Claude Desktop will prompt for credentials interactively in the chat when they are not set in the environment, without requiring any manual env var configuration.
+
+---
+
 ## Change Set 19 — Auto token acquisition for get_lab_alerts
 
 **Date:** 2026-06-27
