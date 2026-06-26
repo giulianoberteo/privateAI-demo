@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 21 — Revert credential params; use env vars in claude_desktop_config.json
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `26b17f4`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Reverted the `username` / `password` tool parameters added in Change Set 20. Claude Desktop correctly refuses to accept credentials through chat (security policy). The right approach is to set `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` in the `"env"` block of `claude_desktop_config.json` — Claude Desktop injects them as environment variables into the MCP server process at startup, so they never pass through the chat or the LLM.
+
+---
+
 ## Change Set 20 — Interactive credential prompting in get_lab_alerts
 
 **Date:** 2026-06-27
