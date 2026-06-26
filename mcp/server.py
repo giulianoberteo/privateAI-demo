@@ -119,33 +119,69 @@ def search_vcf_documentation(
     return "\n\n---\n\n".join(output)
 
 
-# --- Tool 2: VCF Operations live alerts (WIP) ---
+# --- Aria Ops token cache (acquired once per server lifetime) ---
+_ops_token: str = ""
+
+
+async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
+    """POST to Aria Ops token endpoint and cache the result."""
+    global _ops_token
+    if _ops_token:
+        return _ops_token
+    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501
+        resp = await http.post(
+            f"{base_url}/suite-api/api/auth/token/acquire",
+            json={"username": user, "password": password, "authSource": "LOCAL"},
+            headers={"Accept": "application/json"},
+        )
+        resp.raise_for_status()
+        _ops_token = resp.json()["token"]
+        return _ops_token
+
+
+# --- Tool 2: VCF Operations live alerts ---
 @mcp.tool()
 async def get_lab_alerts(severity: str = "CRITICAL") -> str:
     """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
-    Requires VCF_OPS_URL and VCF_OPS_TOKEN environment variables.
+    Authentication (pick one):
+      - VCF_OPS_USER + VCF_OPS_PASS  — auto-acquires an OpsToken (recommended)
+      - VCF_OPS_TOKEN                 — pre-acquired token used as Basic auth fallback
+
+    VCF_OPS_URL must be the Aria Ops base URL, e.g. https://vcf-ops.lab.local
     """
-    vcf_ops_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local/suite-api/api/alerts")
-    token       = os.getenv("VCF_OPS_TOKEN", "")
+    base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
+    user     = os.getenv("VCF_OPS_USER", "")
+    password = os.getenv("VCF_OPS_PASS", "")
+    token    = os.getenv("VCF_OPS_TOKEN", "")
 
-    if not token:
-        return "VCF_OPS_TOKEN env var is not set — cannot authenticate to VCF Operations."
-
-    headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
+    if not user and not token:
+        return (
+            "No credentials found. Set VCF_OPS_USER + VCF_OPS_PASS "
+            "(recommended) or VCF_OPS_TOKEN."
+        )
 
     async with httpx.AsyncClient(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
         try:
-            response = await http.get(f"{vcf_ops_url}?alertCriticality={severity}", headers=headers)
+            if user:
+                ops_token = await _acquire_ops_token(base_url, user, password)
+                headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
+            else:
+                headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
+
+            response = await http.get(
+                f"{base_url}/suite-api/api/alerts?alertCriticality={severity}",
+                headers=headers,
+            )
             response.raise_for_status()
             data   = response.json()
             alerts = [
                 f"- {a['resourceName']}: {a['alertDefinitionName']}"
                 for a in data.get("alerts", [])[:5]
             ]
-            return "\n".join(alerts) if alerts else "No critical alerts found."
+            return "\n".join(alerts) if alerts else f"No {severity} alerts found."
         except Exception as e:
-            return f"Error connecting to VCF Lab: {e}"
+            return f"Error connecting to VCF Operations: {e}"
 
 
 if __name__ == "__main__":
