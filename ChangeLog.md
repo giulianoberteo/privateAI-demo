@@ -2,6 +2,24 @@
 
 ---
 
+## Change Set 18 — Fix two bugs in get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `0bc4be4`
+
+### What was changed
+
+#### `mcp/server.py`
+
+**Wrong query parameter** (`severity` → `alertCriticality`)
+The Aria Ops REST API uses `alertCriticality` to filter alerts by severity level. The previous `?severity=CRITICAL` parameter was silently ignored by the endpoint, returning all alerts unfiltered.
+
+**Wrong field name** (`alertName` → `alertDefinitionName`)
+The Aria Ops alert object has `alertDefinitionName` for the alert description. The previous `a['alertName']` raised a `KeyError` on every alert, causing every call to fall into the `except` block and return an error string instead of the alert list.
+
+---
+
 ## Change Set 17 — Fix status widget border by targeting HTML details element
 
 **Date:** 2026-06-24
