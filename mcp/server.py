@@ -141,29 +141,22 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
 
 # --- Tool 2: VCF Operations live alerts ---
 @mcp.tool()
-async def get_lab_alerts(
-    severity: str = "CRITICAL",
-    username: str = "",
-    password: str = "",
-) -> str:
+async def get_lab_alerts(severity: str = "CRITICAL") -> str:
     """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
-    If username and password are not supplied, they are read from the
-    VCF_OPS_USER and VCF_OPS_PASS environment variables. If neither is
-    available, ask the user for their Aria Ops username and password before
-    calling this tool.
-
-    VCF_OPS_URL must be the Aria Ops base URL, e.g. https://vcf-ops.lab.local
+    Credentials are read from environment variables — set them in
+    claude_desktop_config.json under the "env" key for this MCP server:
+      VCF_OPS_URL  — Aria Ops base URL, e.g. https://vcf-ops.lab.local
+      VCF_OPS_USER — Aria Ops username, e.g. admin@local
+      VCF_OPS_PASS — Aria Ops password
 
     Args:
         severity: Alert criticality to filter on. One of: CRITICAL, IMMEDIATE,
                   WARNING, INFORMATION. Defaults to CRITICAL.
-        username: Aria Ops username (e.g. admin@local). Ask the user if not known.
-        password: Aria Ops password. Ask the user if not known.
     """
     base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
-    user     = username or os.getenv("VCF_OPS_USER", "")
-    password = password or os.getenv("VCF_OPS_PASS", "")
+    user     = os.getenv("VCF_OPS_USER", "")
+    password = os.getenv("VCF_OPS_PASS", "")
     token    = os.getenv("VCF_OPS_TOKEN", "")
 
     if not user and not token:
