@@ -136,11 +136,11 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
 
     async with httpx.AsyncClient(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
         try:
-            response = await http.get(f"{vcf_ops_url}?severity={severity}", headers=headers)
+            response = await http.get(f"{vcf_ops_url}?alertCriticality={severity}", headers=headers)
             response.raise_for_status()
             data   = response.json()
             alerts = [
-                f"- {a['resourceName']}: {a['alertName']}"
+                f"- {a['resourceName']}: {a['alertDefinitionName']}"
                 for a in data.get("alerts", [])[:5]
             ]
             return "\n".join(alerts) if alerts else "No critical alerts found."
