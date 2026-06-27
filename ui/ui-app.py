@@ -350,7 +350,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
                     st.write("**Live lab alerts:**")
                     for a in raw_alerts:
                         icon = _ICON.get(a["criticality"], "⚪")
-                        st.write(f"{icon} **{a['resource']}** — {a['name']} `[{a['criticality']}]`")
+                        st.write(f"{icon} {a['criticality']} — **{a['resource']}**: {a['name']}")
                     alert_lines = [
                         f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
                         for a in raw_alerts
