@@ -2,6 +2,26 @@
 
 ---
 
+## Change Set 41 — Cloud cost shadow estimate in sidebar
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `77c4b76`
+
+### What was changed
+
+#### `config.py`
+- `UI_COST_PER_1M_INPUT` (env override, default `$0.15`) — input token rate
+- `UI_COST_PER_1M_OUTPUT` (env override, default `$0.60`) — output token rate
+- Defaults approximate GPT-4o mini pricing, a fair cloud equivalent for a 14B-class local model
+
+#### `ui-app.py`
+- Two number inputs in the sidebar ("Input $/1M tokens", "Output $/1M tokens") under a "Cloud cost shadow" label — editable live
+- Session token counter now appends `~$X.XXXX cloud equivalent` calculated from prompt × input rate + completion × output rate
+- Actual Ollama cost is always $0; this is a reference comparison only
+
+---
+
 ## Change Set 40 — Externalise page title and icon to config.py
 
 **Date:** 2026-06-27
