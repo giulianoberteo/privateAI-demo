@@ -34,6 +34,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_tokens" not in st.session_state:
     st.session_state.session_tokens = {"prompt": 0, "completion": 0}
+if "last_query_type" not in st.session_state:
+    st.session_state.last_query_type = "docs"  # "alert" or "docs"
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
@@ -232,8 +234,9 @@ with st.sidebar:
     temp = _TEMP_OPTIONS[_temp_label]
 
     if st.button("🗑️ Clear Chat", use_container_width=True):
-        st.session_state.messages       = []
-        st.session_state.session_tokens = {"prompt": 0, "completion": 0}
+        st.session_state.messages        = []
+        st.session_state.session_tokens  = {"prompt": 0, "completion": 0}
+        st.session_state.last_query_type = "docs"
         st.rerun()
 
     _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
@@ -301,10 +304,21 @@ _ALERT_KEYWORDS = frozenset({
     "ops", "operations", "vcf-ops", "aria", "alarm", "alarms", "issue", "issues",
 })
 
+_DOC_KEYWORDS = frozenset({
+    "vcf", "nsx", "vsan", "vsphere", "esxi", "vcenter", "vcentre",
+    "configure", "install", "deploy", "setup", "architecture",
+    "storage", "network", "cluster", "sddc", "documentation", "manual",
+})
+
 def _wants_alerts(prompt: str) -> bool:
     """Return True when the user's prompt appears to be asking about live lab alerts."""
     words = set(prompt.lower().replace("-", " ").split())
     return bool(words & _ALERT_KEYWORDS)
+
+def _is_doc_query(prompt: str) -> bool:
+    """Return True when the prompt explicitly references VCF documentation topics."""
+    words = set(prompt.lower().split())
+    return bool(words & _DOC_KEYWORDS)
 
 
 def _format_alert_context(severity: str = "") -> str:
@@ -326,7 +340,13 @@ def _format_alert_context(severity: str = "") -> str:
 # --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
     """Stream an assistant response and append it to session messages."""
-    is_alert_query = _wants_alerts(user_prompt)
+    # Explicit alert keywords → alert path.
+    # Follow-up with no doc keywords after an alert turn → stay on alert path.
+    # Explicit VCF/doc keywords → always switch to doc path.
+    is_alert_query = _wants_alerts(user_prompt) or (
+        st.session_state.get("last_query_type") == "alert"
+        and not _is_doc_query(user_prompt)
+    )
 
     with st.chat_message("assistant"):
         with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
@@ -410,6 +430,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
         "content": full_response,
         "tokens":  tokens,
     })
+    st.session_state.last_query_type = "alert" if is_alert_query else "docs"
 
 
 # --- 10. CHAT UI ---
