@@ -2,6 +2,29 @@
 
 ---
 
+## Change Set 28 — Add Lab Alerts panel to Streamlit UI sidebar
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `df9eee2`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Ported the `get_lab_alerts` logic from the MCP server into the Streamlit UI as two synchronous functions (Streamlit does not support `async`):
+
+- **`_acquire_ops_token_sync`** — exchanges `VCF_OPS_USER` + `VCF_OPS_PASS` for an Aria Ops OpsToken via `POST /suite-api/api/auth/token/acquire`. Result cached at module level; `VCF_OPS_AUTH_SOURCE` env var supported for LDAP auth sources.
+- **`fetch_lab_alerts(severity)`** — fetches active alerts from `GET /suite-api/api/alerts`, resolves each `resourceId` to a human-readable name via `GET /suite-api/api/resources/{id}`, returns a structured `(alerts, error)` tuple. Cached for 120 seconds via `@st.cache_data`.
+
+New sidebar panel ("Lab Alerts") includes:
+- Severity filter dropdown (All / Critical / Immediate / Warning / Information)
+- 🔄 Refresh button that clears the cache and reruns
+- Up to 10 alerts rendered with criticality icons (🔴🟠🟡🔵)
+- Graceful "not configured" message when `VCF_OPS_URL` is unset
+
+---
+
 ## Change Set 27 — Add inline comments to get_lab_alerts
 
 **Date:** 2026-06-27
