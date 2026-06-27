@@ -2,6 +2,25 @@
 
 ---
 
+## Change Set 35 — Render alert icons directly in the UI widget
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `7b51776`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Traffic-light icons were injected into the LLM system prompt but the LLM didn't reliably reproduce them. Fixed with two changes:
+
+1. **Direct UI rendering** — when an alert query is detected, the alert list is now rendered inside the `st.status` widget using `st.write` with icons (`🔴 / 🟡 / 🟢`) and bold resource names. Icons always appear regardless of how the LLM formats its response.
+2. **Explicit LLM instruction** — the system prompt now includes a line instructing the LLM to start each alert reference with its severity icon, so the LLM's commentary also uses them consistently.
+
+Removed `_format_alert_context` (dead code — logic inlined into `_generate_response`).
+
+---
+
 ## Change Set 34 — Replace alert keyword whitelist with doc-keyword gate
 
 **Date:** 2026-06-27
