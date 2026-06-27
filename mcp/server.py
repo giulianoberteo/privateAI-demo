@@ -162,19 +162,26 @@ async def get_lab_alerts(severity: str = "") -> str:
                   INFORMATION. Leave empty (default) to return all active alerts
                   regardless of severity.
     """
+    # Read connection details and credentials from environment variables.
+    # These are injected by Claude Desktop from the "env" block in claude_desktop_config.json.
     base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
     user     = os.getenv("VCF_OPS_USER", "")
     password = os.getenv("VCF_OPS_PASS", "")
-    token    = os.getenv("VCF_OPS_TOKEN", "")
+    token    = os.getenv("VCF_OPS_TOKEN", "")  # fallback: pre-acquired Base64 Basic token
 
+    # Bail out early if no credentials are configured at all.
     if not user and not token:
         return (
             "No credentials found. Set VCF_OPS_USER + VCF_OPS_PASS "
             "(recommended) or VCF_OPS_TOKEN."
         )
 
-    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
+    # verify=False because lab Aria Ops uses a self-signed TLS certificate.
+    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501
         try:
+            # --- Step 1: Authenticate ---
+            # Preferred: exchange username + password for a short-lived OpsToken.
+            # Fallback: use a pre-encoded Basic token set in VCF_OPS_TOKEN.
             if user:
                 try:
                     ops_token = await _acquire_ops_token(base_url, user, password)
@@ -188,11 +195,15 @@ async def get_lab_alerts(severity: str = "") -> str:
             else:
                 headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
 
+            # --- Step 2: Fetch alerts ---
+            # Without a severity filter the API returns all active alerts.
+            # With a filter it returns only alerts matching that criticality level.
             url = f"{base_url}/suite-api/api/alerts"
             if severity:
                 url += f"?alertCriticality={severity.upper()}"
             response = await http.get(url, headers=headers)
             response.raise_for_status()
+
             data       = response.json()
             raw_alerts = data.get("alerts", [])
 
@@ -200,8 +211,11 @@ async def get_lab_alerts(severity: str = "") -> str:
                 label = severity.upper() if severity else "active"
                 return f"No {label} alerts found."
 
-            # Resolve resource names: Aria Ops alerts carry only a resourceId;
-            # the human-readable name lives at GET /suite-api/api/resources/{id}.
+            # --- Step 3: Resolve resource names ---
+            # Aria Ops alert objects contain only a resourceId (UUID), not a
+            # human-readable name. We call GET /resources/{id} for each unique
+            # resource in the top-5 alerts to get the display name.
+            # Results are cached so the same resource is never fetched twice.
             resource_cache: dict[str, str] = {}
             for a in raw_alerts[:5]:
                 rid = a.get("resourceId", "")
@@ -212,19 +226,24 @@ async def get_lab_alerts(severity: str = "") -> str:
                             headers=headers,
                         )
                         if r.status_code == 200:
+                            # resourceKey.name holds the object's display name
+                            # (e.g. "esxi-01.lab.local" or "my-vm")
                             resource_cache[rid] = (
                                 r.json().get("resourceKey", {}).get("name", rid)
                             )
                         else:
-                            resource_cache[rid] = rid
+                            resource_cache[rid] = rid  # fall back to the raw ID
                     except Exception:
                         resource_cache[rid] = rid
 
+            # --- Step 4: Format output ---
             lines = []
             for a in raw_alerts[:5]:
                 rid      = a.get("resourceId", "")
                 resource = resource_cache.get(rid, rid or "unknown-resource")
-                name     = (
+                # alertDefinitionName is the standard field; fall back to older field names
+                # used by some Aria Ops versions.
+                name = (
                     a.get("alertDefinitionName")
                     or a.get("alertName")
                     or a.get("type", "unknown-alert")
@@ -232,6 +251,7 @@ async def get_lab_alerts(severity: str = "") -> str:
                 lines.append(f"- {resource}: {name}")
 
             return "\n".join(lines)
+
         except httpx.HTTPStatusError as e:
             return (
                 f"Alerts request failed — HTTP {e.response.status_code}.\n"
