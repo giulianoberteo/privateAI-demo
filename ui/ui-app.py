@@ -228,6 +228,11 @@ with st.sidebar:
     _temp_label = st.selectbox("Answer style", list(config.UI_TEMP_OPTIONS.keys()), index=0)
     temp = config.UI_TEMP_OPTIONS[_temp_label]
 
+    st.divider()
+    st.caption("**Cloud cost shadow** *(local inference is free)*")
+    _rate_input  = st.number_input("Input $/1M tokens",  min_value=0.0, value=config.UI_COST_PER_1M_INPUT,  step=0.01, format="%.2f", key="rate_input")
+    _rate_output = st.number_input("Output $/1M tokens", min_value=0.0, value=config.UI_COST_PER_1M_OUTPUT, step=0.01, format="%.2f", key="rate_output")
+
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages        = []
         st.session_state.session_tokens  = {"prompt": 0, "completion": 0}
@@ -243,11 +248,16 @@ with st.sidebar:
     session_total = session_t["prompt"] + session_t["completion"]
     if session_total > 0:
         st.divider()
+        _cost = (
+            session_t["prompt"]     / 1_000_000 * _rate_input +
+            session_t["completion"] / 1_000_000 * _rate_output
+        )
         st.caption(
             f"**Session tokens**  \n"
             f"↑ {session_t['prompt']:,} prompt  \n"
             f"↓ {session_t['completion']:,} completion  \n"
-            f"**{session_total:,} total**"
+            f"**{session_total:,} total**  \n"
+            f"~**${_cost:.4f}** cloud equivalent"
         )
 
 

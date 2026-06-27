@@ -69,8 +69,17 @@ UI_SEVERITY_ICON: dict[str, str] = {
 }
 
 # --- UI presentation ---
-UI_PAGE_TITLE = os.getenv("UI_PAGE_TITLE", "🦅 Hawk - VCF vArchitect Agent")
-UI_PAGE_ICON  = os.getenv("UI_PAGE_ICON",  "🛡️")
+UI_PAGE_TITLE = os.getenv("UI_PAGE_TITLE", "🦅 VCF vArchitect Agent")
+UI_PAGE_ICON  = os.getenv("UI_PAGE_ICON",  "🦅")
+
+# Shadow cost rates (USD per 1 million tokens) used to estimate what the same
+# conversation would cost on a cloud API. These are not real charges — Ollama
+# runs locally for free. Defaults approximate GPT-4o mini pricing (a fair
+# comparison for a 14B-class model).
+#   Input  ~$0.15 / 1M  (GPT-4o mini input)
+#   Output ~$0.60 / 1M  (GPT-4o mini output)
+UI_COST_PER_1M_INPUT  = float(os.getenv("UI_COST_PER_1M_INPUT",  "0.15"))
+UI_COST_PER_1M_OUTPUT = float(os.getenv("UI_COST_PER_1M_OUTPUT", "0.60"))
 
 # Answer-style presets shown in the sidebar temperature selector.
 UI_TEMP_OPTIONS: dict[str, float] = {
