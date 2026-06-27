@@ -1,3 +1,38 @@
+# VCF vArchitect Agent — Private AI Demo
+
+A fully local AI assistant for VMware Cloud Foundation (VCF) that answers technical questions, retrieves documentation, and monitors live lab health — entirely on your machine, with no data sent to any cloud.
+
+## What it does
+
+The project combines three capabilities in a single chat interface:
+
+**1. Documentation Q&A (RAG)**
+Ask any technical question about VCF 9.0 or 9.1 — architecture, networking, storage, deployment, NSX, vSAN — and the agent retrieves the most relevant passages from your local PDF library before generating an answer. Sources and page references are shown alongside every response so you can verify what you're reading.
+
+**2. Live lab health monitoring**
+Connect it to a running VCF Operations (Aria Ops) instance and ask in plain English: *"how's my lab?"*, *"any critical alerts?"*, *"what's degraded right now?"*. The agent fetches live alert data from the Aria Ops REST API, resolves resource UUIDs to human-readable names, and displays results with traffic-light severity icons (🔴 CRITICAL · 🟠 IMMEDIATE · 🟡 WARNING · 🟢 INFORMATION). Follow-up prompts like *"create a table summary"* stay in alert context without re-querying the docs.
+
+**3. MCP server for Claude Desktop**
+The same RAG and alert tools are exposed as a Model Context Protocol (MCP) server, so Claude Desktop (or any MCP-compatible client) can call them directly — no Streamlit required.
+
+## Why fully local?
+
+Every component — PDF parsing, text chunking, vector embeddings, LLM inference, vector storage — runs on your hardware. No query, document chunk, or conversation turn leaves your machine. You can pull the Ethernet cable and it keeps working. This makes it suitable for air-gapped labs, environments with strict data-residency requirements, or simply anyone who prefers not to send internal technical documentation to a cloud API.
+
+## Stack at a glance
+
+| Layer | Tool |
+|---|---|
+| Embeddings | `mxbai-embed-large` via Ollama |
+| Vector store | ChromaDB (local persistent) |
+| LLM inference | `qwen2.5:14b` (or any Ollama model) via Ollama |
+| UI | Streamlit — full-width chat with top toolbar |
+| MCP server | FastMCP |
+| Dependency management | `uv` |
+| Live alerts | Aria Ops REST API (`/suite-api/api/alerts`) |
+
+---
+
 # Disclaimer
 I'm not an expert in Artificial Intelligence, LLMs, RAG, MCP, or any of the tools and technologies mentioned in this demo.
 
