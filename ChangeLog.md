@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 27 — Add inline comments to get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `c6230b2`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Added step-by-step inline comments to `get_lab_alerts` explaining the four logical phases: credential loading, authentication (OpsToken vs Basic fallback), alert fetching with optional severity filter, resource name resolution via secondary API call, and output formatting.
+
+---
+
 ## Change Set 26 — Make severity filter optional; default returns all active alerts
 
 **Date:** 2026-06-27
