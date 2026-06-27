@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 37 — Differentiate IMMEDIATE from CRITICAL with separate icon
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `5532bd7`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+IMMEDIATE alerts now use 🟠 (orange) instead of sharing 🔴 (red) with CRITICAL. Full severity scale: 🔴 CRITICAL · 🟠 IMMEDIATE · 🟡 WARNING · 🟢 INFORMATION. Updated both the UI render mapping and the LLM system prompt icon instruction.
+
+---
+
 ## Change Set 36 — Show icon + severity word together in alert display
 
 **Date:** 2026-06-27
