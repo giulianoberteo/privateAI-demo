@@ -330,7 +330,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     with st.chat_message("assistant"):
         with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
 
-            _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🔴", "WARNING": "🟡", "INFORMATION": "🟢"}
+            _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🟢"}
 
             if is_alert_query:
                 # Pure alert query — skip RAG entirely, fetch live data only.
@@ -379,7 +379,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
             system_prompt += (
                 f"\n\n{alert_context}"
                 "\n\nWhen referencing alerts in your response, always start each alert line "
-                "with its severity icon: 🔴 for CRITICAL/IMMEDIATE, 🟡 for WARNING, 🟢 for INFORMATION."
+                "with its severity icon: 🔴 for CRITICAL, 🟠 for IMMEDIATE, 🟡 for WARNING, 🟢 for INFORMATION."
             )
 
         ollama_messages = [{"role": "system", "content": system_prompt}]
