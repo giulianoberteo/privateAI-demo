@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 33 — Traffic-light icons for alert severity
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `e2c110f`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Updated alert severity icon mapping in `_format_alert_context` to a standard traffic-light (RAG) pattern: CRITICAL → 🔴, IMMEDIATE → 🔴, WARNING → 🟡, INFORMATION → 🟢.
+
+---
+
 ## Change Set 32 — Update README with live alert feature documentation
 
 **Date:** 2026-06-27
