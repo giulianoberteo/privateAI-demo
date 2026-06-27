@@ -328,6 +328,38 @@ section[data-testid="stSidebar"] h3 {{
     background-color: {v['bg_tag']} !important;
 }}
 
+/* ── st.popover trigger button ───────────────────────────── */
+[data-testid="stPopoverButton"] {{
+    background: transparent !important;
+    border: 1px solid {v['accent']} !important;
+    color: {v['accent']} !important;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 14px;
+    width: 100%;
+    transition: background 0.12s, color 0.12s;
+}}
+[data-testid="stPopoverButton"]:hover {{
+    background: {v['accent']} !important;
+    color: #ffffff !important;
+}}
+[data-testid="stPopoverButton"] p,
+[data-testid="stPopoverButton"] span {{
+    color: inherit !important;
+}}
+
+/* ── st.popover floating panel ───────────────────────────── */
+[data-testid="stPopoverBody"] {{
+    background-color: {v['bg_card']} !important;
+    border: 1px solid {v['border']} !important;
+    border-radius: 3px !important;
+}}
+[data-testid="stPopoverBody"] p,
+[data-testid="stPopoverBody"] label,
+[data-testid="stPopoverBody"] span {{
+    color: {v['text_primary']} !important;
+}}
+
 /* ── Radio buttons ───────────────────────────────────────── */
 [data-testid="stRadio"] label {{
     color: {v['text_primary']} !important;
