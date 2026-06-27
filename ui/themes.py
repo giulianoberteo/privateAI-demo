@@ -210,7 +210,8 @@ section[data-testid="stSidebar"] h3 {{
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .stButton > button,
-[data-testid="stBaseButton-secondary"] {{
+[data-testid="stBaseButton-secondary"],
+[data-testid="stPopoverButton"] {{
     background: transparent !important;
     border: 1px solid {v['accent']} !important;
     color: {v['accent']} !important;
@@ -221,7 +222,8 @@ section[data-testid="stSidebar"] h3 {{
     transition: background 0.12s, color 0.12s;
 }}
 .stButton > button:hover,
-[data-testid="stBaseButton-secondary"]:hover {{
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="stPopoverButton"]:hover {{
     background: {v['accent']} !important;
     color: #ffffff !important;
 }}
@@ -235,6 +237,11 @@ section[data-testid="stSidebar"] h3 {{
 .stButton > button[kind="primary"]:hover,
 [data-testid="stBaseButton-primary"]:hover {{
     opacity: 0.88;
+}}
+/* ensure text inside popover button inherits the button's colour */
+[data-testid="stPopoverButton"] p,
+[data-testid="stPopoverButton"] span {{
+    color: inherit !important;
 }}
 
 /* ── Text inputs & text areas ────────────────────────────── */
@@ -326,26 +333,6 @@ section[data-testid="stSidebar"] h3 {{
 [data-baseweb="popover"] [role="option"]:hover,
 [data-baseweb="popover"] [aria-selected="true"] {{
     background-color: {v['bg_tag']} !important;
-}}
-
-/* ── st.popover trigger button ───────────────────────────── */
-[data-testid="stPopoverButton"] {{
-    background: transparent !important;
-    border: 1px solid {v['accent']} !important;
-    color: {v['accent']} !important;
-    border-radius: 3px;
-    font-weight: 500;
-    font-size: 14px;
-    width: 100%;
-    transition: background 0.12s, color 0.12s;
-}}
-[data-testid="stPopoverButton"]:hover {{
-    background: {v['accent']} !important;
-    color: #ffffff !important;
-}}
-[data-testid="stPopoverButton"] p,
-[data-testid="stPopoverButton"] span {{
-    color: inherit !important;
 }}
 
 /* ── st.popover floating panel ───────────────────────────── */
