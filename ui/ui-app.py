@@ -326,30 +326,35 @@ def _format_alert_context(severity: str = "") -> str:
 # --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
     """Stream an assistant response and append it to session messages."""
-    with st.chat_message("assistant"):
-        with st.status(f"Consulting VCF {version} library...") as status:
-            context, source_list = get_vcf_context(user_prompt, version)
-            st.write("**References found:**")
-            for s in source_list:
-                st.write(f"- {s}")
+    is_alert_query = _wants_alerts(user_prompt)
 
-            # When the user is asking about live alerts, fetch them now and
-            # inject them into the system prompt so the LLM can answer.
-            alert_context = ""
-            if _wants_alerts(user_prompt):
-                status.update(label="Fetching live lab alerts...")
+    with st.chat_message("assistant"):
+        with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
+
+            if is_alert_query:
+                # Pure alert query — skip RAG entirely, fetch live data only.
                 alert_context = _format_alert_context()
+                context       = ""
+                source_list   = []
+            else:
+                # Documentation query — run RAG, no alert fetch needed.
+                context, source_list = get_vcf_context(user_prompt, version)
+                st.write("**References found:**")
+                for s in source_list:
+                    st.write(f"- {s}")
+                alert_context = ""
 
             status.update(label="Analysing data...", state="complete")
 
         system_prompt = (
             f"You are a Senior VCF {version} Architect. "
-            "Use the provided documentation snippets to answer. "
+            "Answer using only the context provided below. "
             "Quote specific hardware specs or CLI commands exactly as they appear. "
-            "If the answer is not in the documentation, say so clearly. "
-            f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
+            "If the answer is not in the context, say so clearly. "
         )
 
+        if context:
+            system_prompt += f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
         if alert_context:
             system_prompt += f"\n\n{alert_context}"
 
