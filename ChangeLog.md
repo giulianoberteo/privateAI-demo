@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 36 — Show icon + severity word together in alert display
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `34b573d`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Alert display format updated from `🔴 **resource** — name [CRITICALITY]` to `🔴 CRITICAL — **resource**: name` so the traffic-light icon and its severity label always appear as a pair.
+
+---
+
 ## Change Set 35 — Render alert icons directly in the UI widget
 
 **Date:** 2026-06-27
