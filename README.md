@@ -10,9 +10,12 @@ The project combines three capabilities in a single chat interface:
 Ask any technical question about VCF 9.0 or 9.1 — architecture, networking, storage, deployment, NSX, vSAN — and the agent retrieves the most relevant passages from your local PDF library before generating an answer. Sources and page references are shown alongside every response so you can verify what you're reading.
 
 **2. Live lab health monitoring**
-Connect it to a running VCF Operations (Aria Ops) instance and ask in plain English: *"how's my lab?"*, *"any critical alerts?"*, *"what's degraded right now?"*. The agent fetches live alert data from the Aria Ops REST API, resolves resource UUIDs to human-readable names, and displays results. Follow-up prompts like *"create a table summary"* stay in alert context without re-querying the docs.
+Connect it to a running VCF Operations (Aria Ops) instance and ask in plain English: *"how's my lab?"*, *"any critical alerts?"*, *"what's degraded right now?"*. The agent fetches live alert data from the Aria Ops REST API, resolves resource UUIDs to human-readable names, and displays results with severity icons. Follow-up prompts like *"create a table summary"* stay in alert context without re-querying the docs.
 
-**3. MCP server for Claude Desktop**
+**3. Live licence status**
+Ask *"what's our licence status?"*, *"which edition are we on?"*, or *"when does the licence expire?"* and the agent queries the Aria Ops licensing endpoints directly, returning the product edition (CORE / STANDARD / ADVANCED / ENTERPRISE), validity status, licence name, and expiry date — all surfaced in chat before the LLM response.
+
+**4. MCP server for Claude Desktop**
 The same RAG and alert tools are exposed as a Model Context Protocol (MCP) server, so Claude Desktop (or any MCP-compatible client) can call them directly — no Streamlit required.
 
 ## Why fully local?
@@ -109,6 +112,11 @@ When a user asks a question via the frontend, the agent picks one of two paths:
 - **Aria Ops REST call** → fetches live alerts from VCF Operations; resource names are resolved via a secondary API call.
 - **No RAG lookup** → the documentation index is skipped entirely for pure alert queries, avoiding a pointless vector search.
 - **Follow-up awareness** → subsequent prompts (*"create a table summary"*, *"group by severity"*) continue in alert mode without re-triggering a documentation search.
+
+**Live licence path** (licensing questions):
+- **Intent detection** → keywords like "licens" or "edition" are matched first, before alert or doc routing.
+- **Dual API call** → `GET /suite-api/api/product/licensing/info` and `GET /suite-api/api/product/licensing/edition` are called in a single HTTP session; results are merged and the expiry epoch is converted to a readable date.
+- **Structured display** → licence status, edition, name, and expiry are rendered in the chat panel before the LLM commentary.
 
 ## 3. Extensible Multi-App Gateway (The Orange/Brown Pathway)
 Beyond the custom web interface, the knowledge base is also exposed via the Model Context Protocol (MCP):

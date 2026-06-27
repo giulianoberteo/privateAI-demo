@@ -2,6 +2,47 @@
 
 ---
 
+## Change Set 48 — Live licence status query in UI chat
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `4f3d130`
+
+### What was added
+
+| Component | Change |
+|---|---|
+| `fetch_license_info()` | New cached sync function in `ui-app.py`; calls `GET /suite-api/api/product/licensing/info` and `GET /suite-api/api/product/licensing/edition`, merges results, converts epoch ms expiry to `YYYY-MM-DD` |
+| `_is_license_query()` | New routing helper; triggers on any prompt containing "licens" or "edition" |
+| `_generate_response()` | Third routing path added (priority: licence > alert > RAG); sets `last_query_type = "license"` for follow-up continuity |
+
+### User experience
+
+Ask the chatbot any of:
+- *"What's our licence status?"*
+- *"Which edition are we running?"*
+- *"Is VCF Operations licensed?"*
+- *"When does the licence expire?"*
+
+The UI surfaces a structured block before the LLM response:
+
+```
+VCF Operations licence:
+- Status: ✅ Licensed
+- Edition: ENTERPRISE
+- Licence name: VCF Operations Enterprise
+- Expires: 2027-03-15
+```
+
+### Endpoints used
+
+| Endpoint | Response field(s) |
+|---|---|
+| `GET /suite-api/api/product/licensing/info` | `licensed`, `licenseName`, `expirationDate` (epoch ms) |
+| `GET /suite-api/api/product/licensing/edition` | `productLicensingEdition` (enum: NOT_LICENSED / CORE / STANDARD / ADVANCED / ENTERPRISE / UNKNOWN) |
+
+---
+
 ## Change Set 47 — Enhance MCP get_lab_alerts: all severities, icons, summary header
 
 **Date:** 2026-06-27
