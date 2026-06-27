@@ -1,4 +1,6 @@
+import os
 import sys
+import httpx  # pyright: ignore[reportMissingImports]
 import streamlit as st
 import ollama
 import chromadb
@@ -8,6 +10,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
+
+# --- ARIA OPS TOKEN CACHE ---
+# Acquired once per server process lifetime; shared across all Streamlit sessions.
+_ops_token_ui: str = ""
+
 
 # --- CONSTANTS ---
 _TEMP_OPTIONS = {
@@ -68,6 +75,105 @@ def get_collection(version: str):
             f"Details: `{e}`"
         )
         st.stop()
+
+
+def _acquire_ops_token_sync(base_url: str, user: str, password: str) -> str:
+    """Exchange username + password for a short-lived Aria Ops OpsToken (cached module-level)."""
+    global _ops_token_ui
+    if _ops_token_ui:
+        return _ops_token_ui
+    # authSource is the display name of the auth source in Aria Ops.
+    # Omitting it (default) works for local accounts; set VCF_OPS_AUTH_SOURCE for LDAP.
+    auth_source = os.getenv("VCF_OPS_AUTH_SOURCE", "")
+    body: dict = {"username": user, "password": password}
+    if auth_source:
+        body["authSource"] = auth_source
+    with httpx.Client(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
+        resp = http.post(
+            f"{base_url}/suite-api/api/auth/token/acquire",
+            json=body,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+        )
+        resp.raise_for_status()
+        _ops_token_ui = resp.json()["token"]
+        return _ops_token_ui
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
+    """Fetch active alerts from Aria Ops and return (alerts, error_message).
+
+    Results are cached for 120 seconds. Call fetch_lab_alerts.clear() to force
+    an immediate refresh (e.g. from a Refresh button).
+
+    Steps:
+      1. Read connection details from env vars (set in shell or .env before starting Streamlit).
+      2. Acquire an OpsToken via POST /suite-api/api/auth/token/acquire (cached module-level).
+      3. Fetch alerts from GET /suite-api/api/alerts with an optional severity filter.
+      4. Resolve each alert's resourceId to a human-readable name via GET /suite-api/api/resources/{id}.
+    """
+    base_url = os.getenv("VCF_OPS_URL", "")
+    user     = os.getenv("VCF_OPS_USER", "")
+    password = os.getenv("VCF_OPS_PASS", "")
+    token    = os.getenv("VCF_OPS_TOKEN", "")
+
+    # Return empty gracefully if Aria Ops is not configured.
+    if not base_url or (not user and not token):
+        return [], ""
+
+    with httpx.Client(verify=False) as http:  # noqa: S501
+        try:
+            # --- Step 1: Authenticate ---
+            # Preferred: exchange username + password for a short-lived OpsToken.
+            # Fallback: use a pre-encoded Basic token set in VCF_OPS_TOKEN.
+            if user:
+                try:
+                    ops_token = _acquire_ops_token_sync(base_url, user, password)
+                except httpx.HTTPStatusError as e:
+                    return [], f"Token acquisition failed — HTTP {e.response.status_code}: {e.response.text[:200]}"
+                headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
+            else:
+                headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
+
+            # --- Step 2: Fetch alerts ---
+            # Without a severity filter the API returns all active alerts.
+            # With a filter it returns only alerts matching that criticality level.
+            url = f"{base_url}/suite-api/api/alerts"
+            if severity:
+                url += f"?alertCriticality={severity.upper()}"
+            resp = http.get(url, headers=headers)
+            resp.raise_for_status()
+            raw_alerts = resp.json().get("alerts", [])
+
+            # --- Step 3: Resolve resource names ---
+            # Aria Ops alert objects contain only a resourceId (UUID), not a
+            # human-readable name. We call GET /resources/{id} for each unique
+            # resource in the top-10 alerts to get the display name.
+            resource_cache: dict[str, str] = {}
+            for a in raw_alerts[:10]:
+                rid = a.get("resourceId", "")
+                if rid and rid not in resource_cache:
+                    r = http.get(f"{base_url}/suite-api/api/resources/{rid}", headers=headers)
+                    resource_cache[rid] = (
+                        r.json().get("resourceKey", {}).get("name", rid)
+                        if r.status_code == 200 else rid
+                    )
+
+            # --- Step 4: Build structured result list ---
+            alerts = []
+            for a in raw_alerts[:10]:
+                rid = a.get("resourceId", "")
+                alerts.append({
+                    "resource":    resource_cache.get(rid, rid or "unknown"),
+                    "name":        a.get("alertDefinitionName") or a.get("alertName") or a.get("type", "unknown"),
+                    "criticality": a.get("criticality", a.get("alertLevel", "")).upper(),
+                })
+            return alerts, ""
+
+        except httpx.HTTPStatusError as e:
+            return [], f"HTTP {e.response.status_code} — {e.response.text[:200]}"
+        except Exception as e:
+            return [], f"{type(e).__name__}: {e}"
 
 
 @st.cache_data(ttl=30)
@@ -134,6 +240,34 @@ with st.sidebar:
     if st.button(_toggle_label, use_container_width=True):
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
+
+    # --- Lab Alerts ---
+    st.divider()
+    st.subheader("Lab Alerts")
+
+    _SEV_OPTIONS = {"All": "", "Critical": "CRITICAL", "Immediate": "IMMEDIATE", "Warning": "WARNING", "Information": "INFORMATION"}
+    _sev_label  = st.selectbox("Severity", list(_SEV_OPTIONS.keys()), index=0, key="alert_severity")
+    _sev_filter = _SEV_OPTIONS[_sev_label]
+
+    if st.button("🔄 Refresh", use_container_width=True, key="refresh_alerts"):
+        fetch_lab_alerts.clear()
+        st.rerun()
+
+    _CRIT_ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🔵"}
+
+    _alerts, _alert_err = fetch_lab_alerts(_sev_filter)
+
+    if _alert_err:
+        st.error(_alert_err)
+    elif not _alerts:
+        if os.getenv("VCF_OPS_URL"):
+            st.caption(f"No {_sev_label.lower()} alerts.")
+        else:
+            st.caption("Set VCF_OPS_URL, VCF_OPS_USER, VCF_OPS_PASS to enable.")
+    else:
+        for _a in _alerts:
+            _icon = _CRIT_ICON.get(_a["criticality"], "⚪")
+            st.markdown(f"{_icon} **{_a['resource']}**  \n{_a['name']}")
 
     session_t     = st.session_state.session_tokens
     session_total = session_t["prompt"] + session_t["completion"]
