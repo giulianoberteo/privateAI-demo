@@ -175,7 +175,14 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
     async with httpx.AsyncClient(verify=False) as http:  # noqa: S501 — lab uses self-signed cert
         try:
             if user:
-                ops_token = await _acquire_ops_token(base_url, user, password)
+                try:
+                    ops_token = await _acquire_ops_token(base_url, user, password)
+                except httpx.HTTPStatusError as e:
+                    return (
+                        f"Token acquisition failed — HTTP {e.response.status_code}.\n"
+                        f"URL: {e.request.url}\n"
+                        f"Response: {e.response.text[:500]}"
+                    )
                 headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
             else:
                 headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
@@ -191,8 +198,14 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
                 for a in data.get("alerts", [])[:5]
             ]
             return "\n".join(alerts) if alerts else f"No {severity} alerts found."
+        except httpx.HTTPStatusError as e:
+            return (
+                f"Alerts request failed — HTTP {e.response.status_code}.\n"
+                f"URL: {e.request.url}\n"
+                f"Response: {e.response.text[:500]}"
+            )
         except Exception as e:
-            return f"Error connecting to VCF Operations: {e}"
+            return f"Error connecting to VCF Operations: {type(e).__name__}: {e}"
 
 
 if __name__ == "__main__":
