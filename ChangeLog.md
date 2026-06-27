@@ -2,6 +2,26 @@
 
 ---
 
+## Change Set 29 — Move lab alerts from sidebar into chat via system prompt injection
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `313d374`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Removed the sidebar Lab Alerts panel. Live alert data is now surfaced through the chat interface: when the user types a prompt containing alert-related keywords (`alert`, `critical`, `warning`, `ops`, `operations`, `alarm`, `issue`, etc.), the app fetches live alerts from Aria Ops and injects them as a `LIVE LAB ALERTS` block into the LLM system prompt before streaming the response. The LLM answers naturally, combining the live alert data with any relevant VCF documentation context.
+
+Two new helpers:
+- **`_wants_alerts(prompt)`** — keyword detection to decide whether to fetch alerts for a given prompt.
+- **`_format_alert_context(severity)`** — fetches alerts via `fetch_lab_alerts` and returns a formatted string ready for system prompt injection.
+
+The status widget now shows "Fetching live lab alerts..." as an intermediate step when an alert query is detected.
+
+---
+
 ## Change Set 28 — Add Lab Alerts panel to Streamlit UI sidebar
 
 **Date:** 2026-06-27
