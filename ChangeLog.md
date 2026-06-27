@@ -2,6 +2,45 @@
 
 ---
 
+## Change Set 47 — Enhance MCP get_lab_alerts: all severities, icons, summary header
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `bacc64b`
+
+### Problem
+
+Claude Desktop was defaulting to calling `get_lab_alerts(severity="CRITICAL")` for general health questions, silently filtering out IMMEDIATE, WARNING, and INFORMATION alerts.
+
+### Root causes fixed
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Tool docstring didn't tell the LLM when to omit `severity` | Added an `IMPORTANT` paragraph at the top: call with no arguments for any general health query; only filter if the user explicitly asks for one severity level |
+| 2 | Output had no severity per line | Each alert line now starts with icon + `[CRITICALITY]` — the LLM can distinguish and group without re-calling the tool |
+| 3 | No total count or severity breakdown | Added a header line: `"Active alerts: N total (X CRITICAL, Y WARNING …)"` |
+| 4 | Hardcoded `[:5]` limit | Replaced with `config.MAX_ALERTS` in both the resource-resolution loop and the format loop |
+
+### Output format (before → after)
+
+**Before:**
+```
+- esxi-01.lab.local: CPU Ready Time Too High
+- vcenter.lab.local: Certificate Expiring Soon
+```
+
+**After:**
+```
+Active alerts: 8 total (2 CRITICAL, 3 IMMEDIATE, 2 WARNING, 1 INFORMATION) — showing first 10
+
+🔴 [CRITICAL] esxi-01.lab.local: CPU Ready Time Too High
+🟠 [IMMEDIATE] vcenter.lab.local: Certificate Expiring Soon
+🟡 [WARNING] vsan-cluster: Disk Latency High
+🟢 [INFORMATION] nsx-manager: Backup Completed
+```
+
+---
+
 ## Change Set 46 — Update README for toolbar/popover layout and cost shadow
 
 **Date:** 2026-06-27
