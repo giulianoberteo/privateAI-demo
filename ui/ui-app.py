@@ -240,7 +240,7 @@ with _col_clear:
         st.rerun()
 
 with _col_theme:
-    if st.button("☀️" if _dark else "🌙", use_container_width=True, help="Toggle light / dark mode"):
+    if st.button("☀️ Light" if _dark else "🌙 Dark", use_container_width=True, help="Toggle light / dark mode"):
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
 
