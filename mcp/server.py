@@ -151,6 +151,12 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
 async def get_lab_alerts(severity: str = "") -> str:
     """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
+    IMPORTANT: Call this tool with NO arguments (severity="") for any general
+    health or status question — "how's my lab?", "any issues?", "what's the
+    status?". The full list is returned and already includes severity for each
+    alert, so the user can filter or summarise from the response. Only pass a
+    severity value when the user explicitly asks to see only one level.
+
     Credentials are read from environment variables — set them in
     claude_desktop_config.json under the "env" key for this MCP server:
       VCF_OPS_URL  — Aria Ops base URL, e.g. https://vcf-ops.lab.local
@@ -160,7 +166,7 @@ async def get_lab_alerts(severity: str = "") -> str:
     Args:
         severity: Alert criticality filter. One of: CRITICAL, IMMEDIATE, WARNING,
                   INFORMATION. Leave empty (default) to return all active alerts
-                  regardless of severity.
+                  across every severity level.
     """
     # Read connection details and credentials from environment variables.
     # These are injected by Claude Desktop from the "env" block in claude_desktop_config.json.
@@ -211,13 +217,16 @@ async def get_lab_alerts(severity: str = "") -> str:
                 label = severity.upper() if severity else "active"
                 return f"No {label} alerts found."
 
+            # Limit to configured maximum before any further processing.
+            alerts_to_show = raw_alerts[:config.MAX_ALERTS]
+
             # --- Step 3: Resolve resource names ---
             # Aria Ops alert objects contain only a resourceId (UUID), not a
             # human-readable name. We call GET /resources/{id} for each unique
-            # resource in the top-5 alerts to get the display name.
-            # Results are cached so the same resource is never fetched twice.
+            # resource UUID to get the display name. Results are cached so the
+            # same resource is never fetched twice.
             resource_cache: dict[str, str] = {}
-            for a in raw_alerts[:5]:
+            for a in alerts_to_show:
                 rid = a.get("resourceId", "")
                 if rid and rid not in resource_cache:
                     try:
@@ -232,25 +241,43 @@ async def get_lab_alerts(severity: str = "") -> str:
                                 r.json().get("resourceKey", {}).get("name", rid)
                             )
                         else:
-                            resource_cache[rid] = rid  # fall back to the raw ID
+                            resource_cache[rid] = rid
                     except Exception:
                         resource_cache[rid] = rid
 
-            # --- Step 4: Format output ---
-            lines = []
-            for a in raw_alerts[:5]:
-                rid      = a.get("resourceId", "")
-                resource = resource_cache.get(rid, rid or "unknown-resource")
-                # alertDefinitionName is the standard field; fall back to older field names
-                # used by some Aria Ops versions.
+            # --- Step 4: Build severity summary and format per-alert lines ---
+            # Severity icons match the UI so Claude's text output can use them too.
+            ICONS = {
+                "CRITICAL":    "🔴",
+                "IMMEDIATE":   "🟠",
+                "WARNING":     "🟡",
+                "INFORMATION": "🟢",
+            }
+
+            counts: dict[str, int] = {}
+            lines:  list[str]      = []
+            for a in alerts_to_show:
+                rid         = a.get("resourceId", "")
+                resource    = resource_cache.get(rid, rid or "unknown-resource")
+                criticality = (a.get("criticality") or a.get("alertLevel") or "UNKNOWN").upper()
+                icon        = ICONS.get(criticality, "⚪")
+                # alertDefinitionName is the standard field; fall back to older field names.
                 name = (
                     a.get("alertDefinitionName")
                     or a.get("alertName")
                     or a.get("type", "unknown-alert")
                 )
-                lines.append(f"- {resource}: {name}")
+                counts[criticality] = counts.get(criticality, 0) + 1
+                lines.append(f"{icon} [{criticality}] {resource}: {name}")
 
-            return "\n".join(lines)
+            total   = len(raw_alerts)
+            shown   = len(alerts_to_show)
+            summary = ", ".join(f"{v} {k}" for k, v in sorted(counts.items()))
+            header  = (
+                f"Active alerts: {total} total ({summary})"
+                + (f" — showing first {shown}" if total > shown else "")
+            )
+            return header + "\n\n" + "\n".join(lines)
 
         except httpx.HTTPStatusError as e:
             return (
