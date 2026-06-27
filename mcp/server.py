@@ -148,7 +148,7 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
 
 # --- Tool 2: VCF Operations live alerts ---
 @mcp.tool()
-async def get_lab_alerts(severity: str = "CRITICAL") -> str:
+async def get_lab_alerts(severity: str = "") -> str:
     """Fetch live alerts from the VCF Operations (Aria Ops) lab.
 
     Credentials are read from environment variables — set them in
@@ -158,8 +158,9 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
       VCF_OPS_PASS — Aria Ops password
 
     Args:
-        severity: Alert criticality to filter on. One of: CRITICAL, IMMEDIATE,
-                  WARNING, INFORMATION. Defaults to CRITICAL.
+        severity: Alert criticality filter. One of: CRITICAL, IMMEDIATE, WARNING,
+                  INFORMATION. Leave empty (default) to return all active alerts
+                  regardless of severity.
     """
     base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
     user     = os.getenv("VCF_OPS_USER", "")
@@ -187,16 +188,17 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
             else:
                 headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
 
-            response = await http.get(
-                f"{base_url}/suite-api/api/alerts?alertCriticality={severity}",
-                headers=headers,
-            )
+            url = f"{base_url}/suite-api/api/alerts"
+            if severity:
+                url += f"?alertCriticality={severity.upper()}"
+            response = await http.get(url, headers=headers)
             response.raise_for_status()
             data       = response.json()
             raw_alerts = data.get("alerts", [])
 
             if not raw_alerts:
-                return f"No {severity} alerts found."
+                label = severity.upper() if severity else "active"
+                return f"No {label} alerts found."
 
             # Resolve resource names: Aria Ops alerts carry only a resourceId;
             # the human-readable name lives at GET /suite-api/api/resources/{id}.
