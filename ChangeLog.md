@@ -2,6 +2,21 @@
 
 ---
 
+## Change Set 42 — Update README for alerts icons, cost shadow, and new config vars
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `c1a2ae9`
+
+### What was changed
+
+#### `README.md`
+- Live alerts feature bullet expanded with traffic-light icon legend (🔴🟠🟡🟢) and example natural-language prompts
+- Added cloud cost shadow feature bullet
+- Configuration table extended with `MAX_ALERTS`, `ALERT_CACHE_TTL`, `UI_PAGE_TITLE`, `UI_PAGE_ICON`, `UI_COST_PER_1M_INPUT`, `UI_COST_PER_1M_OUTPUT`
+
+---
+
 ## Change Set 41 — Cloud cost shadow estimate in sidebar
 
 **Date:** 2026-06-27
