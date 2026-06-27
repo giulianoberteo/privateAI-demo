@@ -2,6 +2,25 @@
 
 ---
 
+## Change Set 32 — Update README with live alert feature documentation
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `be2c514`
+
+### What was changed
+
+#### `README.md`
+
+- **System architecture**: documented the live alerts path alongside the existing RAG path — intent detection, Aria Ops REST call, no RAG lookup, follow-up awareness.
+- **Part 4 — Tools**: rewrote `get_lab_alerts` entry; removed WIP tag; documented all severity levels, OpsToken auth flow, and resource name resolution.
+- **Part 5 — Claude Desktop**: added `env` block with `VCF_OPS_*` vars to the config example, with explanation of why credentials go there and not in the chat.
+- **Part 7 — Streamlit UI features**: added live lab alerts bullet point.
+- **Configuration table**: replaced `VCF_OPS_TOKEN` with `VCF_OPS_USER`, `VCF_OPS_PASS`, and `VCF_OPS_AUTH_SOURCE`.
+- **Quick Start**: added env var exports before the Streamlit run command.
+
+---
+
 ## Change Set 31 — Persist query type in session state to handle alert follow-ups
 
 **Date:** 2026-06-27
