@@ -2,6 +2,23 @@
 
 ---
 
+## Change Set 40 — Externalise page title and icon to config.py
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `c64e656`
+
+### What was changed
+
+#### `config.py`
+- `UI_PAGE_TITLE` (env `UI_PAGE_TITLE`, default `"🦅 Hawk - VCF vArchitect Agent"`)
+- `UI_PAGE_ICON` (env `UI_PAGE_ICON`, default `"🛡️"`)
+
+#### `ui-app.py`
+- `st.set_page_config` and `st.title` now reference `config.UI_PAGE_TITLE` / `config.UI_PAGE_ICON`. No hardcoded branding strings remain in the UI file.
+
+---
+
 ## Change Set 39 — Move _SEVERITY_ICON and _TEMP_OPTIONS to config.py
 
 **Date:** 2026-06-27
