@@ -28,7 +28,10 @@ uv sync                        # installs all dependencies from pyproject.toml
 # 3. Place your VCF PDFs in rag/contentData/ and ingest them
 uv run rag/ingestData.py
 
-# 4a. Run the Streamlit UI
+# 4a. Run the Streamlit UI (add VCF Ops env vars to enable live alerts)
+export VCF_OPS_URL='https://your-vcf-ops.lab.local'
+export VCF_OPS_USER='admin@local'
+export VCF_OPS_PASS='your-password'
 uv run streamlit run ui/ui-app.py
 
 # 4b. Or start the MCP server (for Claude Desktop / Cherry Studio / etc.)
@@ -57,13 +60,20 @@ Before any chat takes place, raw technical data is prepared and stored in a stru
 - **Storage**: vectors, alongside metadata (`source`, `page`, `version`), are saved into a local ChromaDB instance.
 
 ## 2. Live Agent Interaction & RAG Workflow (The Green Pipeline)
-When a user asks a question via the frontend:
+When a user asks a question via the frontend, the agent picks one of two paths:
 
+**Documentation path** (VCF architecture/configuration questions):
 - **User query** → submitted via the Streamlit UI (`ui/ui-app.py`).
 - **Version selection** → the UI sidebar lets you pin to a specific VCF version. The query only touches that version's collection.
 - **Local vector search** → the question is converted to a vector and ChromaDB returns the top matching document chunks in milliseconds.
 - **Contextual synthesis** → the original question + retrieved snippets are packaged into an augmented prompt.
 - **Local inference via Ollama** → dispatched to `qwen3.5:35b-a3b` running locally; response streamed token-by-token back to the UI.
+
+**Live alerts path** (operational questions about the lab):
+- **Intent detection** → keyword matching identifies alert-related prompts (*"show me alerts"*, *"any critical issues?"*, etc.).
+- **Aria Ops REST call** → fetches live alerts from VCF Operations; resource names are resolved via a secondary API call.
+- **No RAG lookup** → the documentation index is skipped entirely for pure alert queries, avoiding a pointless vector search.
+- **Follow-up awareness** → subsequent prompts (*"create a table summary"*, *"group by severity"*) continue in alert mode without re-triggering a documentation search.
 
 ## 3. Extensible Multi-App Gateway (The Orange/Brown Pathway)
 Beyond the custom web interface, the knowledge base is also exposed via the Model Context Protocol (MCP):
@@ -221,8 +231,15 @@ Semantic RAG search across the specified VCF version's documentation. Returns th
 - Set `version="9.0"` to query the 9.0 library specifically.
 - For **cross-version comparison** questions (e.g. *"what changed in 9.1 for stretch clustering?"*), the LLM will automatically call this tool twice — once per version — then synthesise both result sets. No special configuration needed.
 
-**`get_lab_alerts(severity="CRITICAL")`** *(WIP)*  
-Fetches live alerts from VCF Operations (Aria Ops) via REST API. Requires `VCF_OPS_URL` and `VCF_OPS_TOKEN` environment variables. See [Configuration](#configuration).
+**`get_lab_alerts(severity="")`**  
+Fetches live alerts from VCF Operations (Aria Ops) via REST API.
+
+- **No severity filter** (default) → returns all active alerts.
+- **Filtered** → pass `severity="CRITICAL"`, `"IMMEDIATE"`, `"WARNING"`, or `"INFORMATION"` to narrow results.
+- **Authentication** → acquires an OpsToken automatically via `POST /suite-api/api/auth/token/acquire` using `VCF_OPS_USER` + `VCF_OPS_PASS`. The token is cached for the server's lifetime.
+- **Resource names** → alert objects from the API carry only a UUID; the tool resolves each one to a human-readable name via `GET /suite-api/api/resources/{id}`.
+
+Requires `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` environment variables. See [Configuration](#configuration).
 
 > See [`mcp/server.py`](mcp/server.py)
 
@@ -256,11 +273,18 @@ Add the MCP server entry below, replacing `/Users/YOUR_USERNAME/` with your actu
         "/Users/YOUR_USERNAME/local-code-repo/privateAI-demo",
         "run",
         "mcp/server.py"
-      ]
+      ],
+      "env": {
+        "VCF_OPS_URL":  "https://your-vcf-ops.lab.local",
+        "VCF_OPS_USER": "admin@local",
+        "VCF_OPS_PASS": "your-password"
+      }
     }
   }
 }
 ```
+
+The `env` block injects credentials into the MCP server process at startup. They never pass through the chat or the LLM. If `VCF_OPS_URL` is not set, the `get_lab_alerts` tool returns a clear message instead of failing silently.
 
 </details>
 
@@ -314,6 +338,7 @@ And here is the AI Chat app running locally, with the version selector and model
 - **Clear Chat button** — resets the conversation without restarting the server.
 - **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
 - **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the sidebar button, which is always visible with an accent-colour outline border.
+- **Live lab alerts** — ask the chatbot about live operational data from VCF Operations (Aria Ops) in plain English. The agent detects alert-intent automatically, fetches data directly from the Aria Ops REST API, and skips the documentation index entirely for those queries. Follow-up prompts (*"group by severity"*, *"create a table"*) continue in alert mode without re-triggering a documentation search. Set `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` before starting Streamlit to enable this feature.
 
 ### How it works
 
@@ -345,8 +370,10 @@ All tuneable parameters live in [`config.py`](config.py) at the project root. Ev
 | `CHUNK_OVERLAP` | `100` | Overlap between consecutive chunks |
 | `BATCH_LIMIT` | `20` | Max chunks per ChromaDB upsert batch |
 | `DEFAULT_N` | `20` | Default number of results returned by RAG |
-| `VCF_OPS_URL` | *(lab default)* | Aria Ops API endpoint (for `get_lab_alerts`) |
-| `VCF_OPS_TOKEN` | *(unset)* | Base64 `user:pass` for Aria Ops auth |
+| `VCF_OPS_URL` | *(unset)* | Aria Ops base URL, e.g. `https://vcf-ops.lab.local` |
+| `VCF_OPS_USER` | *(unset)* | Aria Ops username, e.g. `admin@local` |
+| `VCF_OPS_PASS` | *(unset)* | Aria Ops password |
+| `VCF_OPS_AUTH_SOURCE` | *(unset)* | Auth source display name — omit for local accounts; set for LDAP (e.g. `"Imported LDAP Server"`) |
 
 Example — switch the embedding model for a single ingest run without editing any file:
 
