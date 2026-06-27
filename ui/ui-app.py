@@ -241,34 +241,6 @@ with st.sidebar:
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
 
-    # --- Lab Alerts ---
-    st.divider()
-    st.subheader("Lab Alerts")
-
-    _SEV_OPTIONS = {"All": "", "Critical": "CRITICAL", "Immediate": "IMMEDIATE", "Warning": "WARNING", "Information": "INFORMATION"}
-    _sev_label  = st.selectbox("Severity", list(_SEV_OPTIONS.keys()), index=0, key="alert_severity")
-    _sev_filter = _SEV_OPTIONS[_sev_label]
-
-    if st.button("🔄 Refresh", use_container_width=True, key="refresh_alerts"):
-        fetch_lab_alerts.clear()
-        st.rerun()
-
-    _CRIT_ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🔵"}
-
-    _alerts, _alert_err = fetch_lab_alerts(_sev_filter)
-
-    if _alert_err:
-        st.error(_alert_err)
-    elif not _alerts:
-        if os.getenv("VCF_OPS_URL"):
-            st.caption(f"No {_sev_label.lower()} alerts.")
-        else:
-            st.caption("Set VCF_OPS_URL, VCF_OPS_USER, VCF_OPS_PASS to enable.")
-    else:
-        for _a in _alerts:
-            _icon = _CRIT_ICON.get(_a["criticality"], "⚪")
-            st.markdown(f"{_icon} **{_a['resource']}**  \n{_a['name']}")
-
     session_t     = st.session_state.session_tokens
     session_total = session_t["prompt"] + session_t["completion"]
     if session_total > 0:
@@ -323,7 +295,35 @@ def get_vcf_context(query: str, version: str):
     return "\n---\n".join(context_parts), list(dict.fromkeys(sources))
 
 
-# --- 8. RESPONSE GENERATOR ---
+# --- 8. ALERT HELPERS ---
+_ALERT_KEYWORDS = frozenset({
+    "alert", "alerts", "critical", "warning", "immediate", "information",
+    "ops", "operations", "vcf-ops", "aria", "alarm", "alarms", "issue", "issues",
+})
+
+def _wants_alerts(prompt: str) -> bool:
+    """Return True when the user's prompt appears to be asking about live lab alerts."""
+    words = set(prompt.lower().replace("-", " ").split())
+    return bool(words & _ALERT_KEYWORDS)
+
+
+def _format_alert_context(severity: str = "") -> str:
+    """Fetch live alerts and return a formatted string ready to inject into the system prompt."""
+    alerts, error = fetch_lab_alerts(severity)
+    if error:
+        return f"[Lab alert fetch error: {error}]"
+    if not alerts:
+        label = severity or "active"
+        return f"[No {label} lab alerts found at this time.]"
+    _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🔵"}
+    lines = [
+        f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
+        for a in alerts
+    ]
+    return "LIVE LAB ALERTS (fetched now from VCF Operations):\n" + "\n".join(lines)
+
+
+# --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
     """Stream an assistant response and append it to session messages."""
     with st.chat_message("assistant"):
@@ -332,6 +332,14 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
             st.write("**References found:**")
             for s in source_list:
                 st.write(f"- {s}")
+
+            # When the user is asking about live alerts, fetch them now and
+            # inject them into the system prompt so the LLM can answer.
+            alert_context = ""
+            if _wants_alerts(user_prompt):
+                status.update(label="Fetching live lab alerts...")
+                alert_context = _format_alert_context()
+
             status.update(label="Analysing data...", state="complete")
 
         system_prompt = (
@@ -341,6 +349,9 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
             "If the answer is not in the documentation, say so clearly. "
             f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
         )
+
+        if alert_context:
+            system_prompt += f"\n\n{alert_context}"
 
         ollama_messages = [{"role": "system", "content": system_prompt}]
         ollama_messages.extend(st.session_state.messages)
@@ -396,7 +407,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     })
 
 
-# --- 9. CHAT UI ---
+# --- 10. CHAT UI ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
