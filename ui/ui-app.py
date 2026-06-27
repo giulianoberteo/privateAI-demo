@@ -31,6 +31,10 @@ if "session_tokens" not in st.session_state:
     st.session_state.session_tokens = {"prompt": 0, "completion": 0}
 if "last_query_type" not in st.session_state:
     st.session_state.last_query_type = "docs"  # "alert" or "docs"
+if "rate_input" not in st.session_state:
+    st.session_state.rate_input  = config.UI_COST_PER_1M_INPUT
+if "rate_output" not in st.session_state:
+    st.session_state.rate_output = config.UI_COST_PER_1M_OUTPUT
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
@@ -194,10 +198,14 @@ def _chunk_stat(chunk, key: str) -> int:
 
 
 def _token_caption(tokens: dict) -> None:
-    """Render a compact token-usage line under an assistant message."""
+    """Render a compact token-usage + cost line under an assistant message."""
     prompt     = tokens.get("prompt", 0)
     completion = tokens.get("completion", 0)
     tps        = tokens.get("tok_per_sec", 0)
+
+    rate_in  = st.session_state.get("rate_input",  config.UI_COST_PER_1M_INPUT)
+    rate_out = st.session_state.get("rate_output", config.UI_COST_PER_1M_OUTPUT)
+    cost     = prompt / 1_000_000 * rate_in + completion / 1_000_000 * rate_out
 
     parts = []
     if prompt:
@@ -206,6 +214,8 @@ def _token_caption(tokens: dict) -> None:
         parts.append(f"↓ {completion:,} completion")
     if tps:
         parts.append(f"{tps:,} tok/s")
+    if cost:
+        parts.append(f"~${cost:.4f}")
 
     if parts:
         st.caption("  ·  ".join(parts))
