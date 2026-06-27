@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 25 — Resolve human-readable resource names in get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `89f22d5`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Aria Ops alert objects carry only a `resourceId` UUID — the human-readable name is not embedded in the alert payload. Fixed `get_lab_alerts` to fetch `GET /suite-api/api/resources/{id}` for each unique resource in the top-5 alerts and use `resourceKey.name` as the display label. Results are cached within the call to avoid duplicate requests. Also removed the debug key-list footer added in Change Set 24.
+
+---
+
 ## Change Set 24 — Fix alert response parsing; expose schema keys for discovery
 
 **Date:** 2026-06-27
