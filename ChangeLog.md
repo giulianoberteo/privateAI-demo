@@ -2,6 +2,26 @@
 
 ---
 
+## Change Set 44 — Replace sidebar with top-toolbar + popover for full-width chat
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `87df02c`
+
+### What was changed
+
+#### `ui-app.py`
+- Removed `with st.sidebar:` block entirely
+- Added a compact top toolbar using `st.columns([1, 1, 2, 6])`:
+  - **🗑️ Clear** — clears chat history and token counters
+  - **☀️ / 🌙** — toggles light/dark theme
+  - **⚙️ Settings** — `st.popover` containing VCF Version, Brain (LLM), Answer style, cloud cost shadow rates, and session token summary
+- All settings widgets use `key=` so values persist in `st.session_state` between reruns (popover widgets only render when open)
+- Session state keys `selected_version`, `selected_model`, `temp_label` initialised in the session state init block
+- `selected_version`, `selected_model`, and `temp` read from session state after the toolbar block — rest of the code unchanged
+
+---
+
 ## Change Set 43 — Show per-message cost estimate in token caption
 
 **Date:** 2026-06-27
