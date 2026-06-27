@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 24 — Fix alert response parsing; expose schema keys for discovery
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `632e6ac`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Authentication against Aria Ops was succeeding but `get_lab_alerts` was crashing with `KeyError: 'resourceName'` because the actual API response schema differs from what was assumed. Fixed by replacing direct key access with a `.get()` fallback chain that tries multiple candidate field names (`resourceName` → `resource.name` → `resourceIdentifier`; `alertDefinitionName` → `alertName` → `type`). Also appends the first alert's key list to the tool output so the real schema can be confirmed and the fallback chain updated if needed.
+
+---
+
 ## Change Set 23 — Better error reporting in get_lab_alerts
 
 **Date:** 2026-06-27
