@@ -2,6 +2,37 @@
 
 ---
 
+## Change Set 46 — Update README for toolbar/popover layout and cost shadow
+
+**Date:** 2026-06-27
+**Branch:** `main`
+
+### What was changed
+
+#### `README.md`
+- Features section rewritten to reflect toolbar-first layout (no sidebar)
+- Added **Full-width chat** bullet describing the top toolbar and Settings popover
+- Updated Version selector, theme toggle, and cloud cost shadow bullets to reference the new popover/toolbar locations
+- Per-message cost estimate (`~$X.XXXX`) mentioned in the cost shadow bullet
+
+---
+
+## Change Set 45 — Fix Settings popover button styling in both themes
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `8923034`
+
+### What was changed
+
+#### `ui/themes.py`
+- Merged `[data-testid="stPopoverButton"]` into the existing button selector group (`.stButton > button`, `[data-testid="stBaseButton-secondary"]`) instead of a separate block
+- Separate isolated block was losing specificity battles against Streamlit's own primary-button fill in light mode (dark blue background, unreadable text)
+- Added `[data-testid="stPopoverButton"] p, span { color: inherit }` to prevent the global `span` rule from overriding button text colour
+- Removed the now-redundant standalone `st.popover trigger button` CSS section
+
+---
+
 ## Change Set 44 — Replace sidebar with top-toolbar + popover for full-width chat
 
 **Date:** 2026-06-27

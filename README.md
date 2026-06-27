@@ -332,14 +332,15 @@ And here is the AI Chat app running locally, with the version selector and model
 
 ## Features
 
-- **Version selector** in the sidebar — pin to VCF 9.0 or 9.1 (or any version you've ingested). Switching version automatically clears the chat history to prevent cross-version context bleed.
+- **Full-width chat** — settings live in a compact top toolbar (🗑️ Clear · ☀️/🌙 theme · ⚙️ Settings) so the entire page width is available for the conversation. The ⚙️ Settings popover contains all configuration and closes when not needed.
+- **Version selector** — pin to VCF 9.0 or 9.1 (or any version you've ingested) from the Settings popover. Switching version automatically clears the chat history to prevent cross-version context bleed.
 - **Dynamic model list** — the Brain dropdown is populated live from `ollama list`, so any model you've pulled appears automatically.
 - **Answer style** — choose between Precise, Balanced, Creative, and Experimental to control how deterministic or creative the answers are.
 - **Clear Chat button** — resets the conversation without restarting the server.
 - **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
-- **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the sidebar button, which is always visible with an accent-colour outline border.
+- **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the ☀️ Light / 🌙 Dark button in the top toolbar.
 - **Live lab alerts** — ask the chatbot about live operational data from VCF Operations (Aria Ops) in plain English (*"how's my lab?"*, *"any critical alerts?"*). The agent detects operational intent automatically, fetches data directly from the Aria Ops REST API, and skips the documentation index entirely for those queries. Each alert is shown with a traffic-light severity icon (🔴 CRITICAL · 🟠 IMMEDIATE · 🟡 WARNING · 🟢 INFORMATION). Follow-up prompts (*"group by severity"*, *"create a table"*) continue in alert mode without re-triggering a documentation search. Set `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` before starting Streamlit to enable this feature.
-- **Cloud cost shadow** — the sidebar shows a running estimate of what the session would cost on a cloud API (defaults to GPT-4o mini rates: $0.15/1M input, $0.60/1M output). The rates are editable live from the sidebar. Your actual Ollama cost is always $0.
+- **Cloud cost shadow** — the Settings popover shows a running estimate of what the session would cost on a cloud API (defaults to GPT-4o mini rates: $0.15/1M input, $0.60/1M output). The rates are editable live and each assistant reply also shows a per-message `~$X.XXXX` estimate inline. Your actual Ollama cost is always $0.
 
 ### How it works
 
