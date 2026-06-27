@@ -2,6 +2,29 @@
 
 ---
 
+## Change Set 22 — Fix Aria Ops token acquisition: drop hardcoded authSource
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `68ede26`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Fixed `_acquire_ops_token` to stop sending `"authSource": "LOCAL"` unconditionally.
+
+The Aria Ops API (`POST /suite-api/api/auth/token/acquire`) expects `authSource` to be the **display name** of the authentication source as configured in Aria Ops Administration > Authentication Sources — not the internal type ID `"LOCAL"`. Sending the wrong value (or any value that doesn't match an existing auth source name) causes a 401 even with correct credentials.
+
+For local user accounts (`admin`, `admin@local`) the field should be **omitted entirely** — the API uses the default local auth source automatically.
+
+Changes:
+- Removed hardcoded `"authSource": "LOCAL"` from the POST body.
+- Added optional `VCF_OPS_AUTH_SOURCE` env var. If set, its value is included as `authSource` in the token request — required for LDAP/Active Directory sources. Leave unset for local accounts.
+- Added explicit `Content-Type: application/json` header to the token POST (belt-and-suspenders for strict server configurations).
+
+---
+
 ## Change Set 21 — Revert credential params; use env vars in claude_desktop_config.json
 
 **Date:** 2026-06-27
