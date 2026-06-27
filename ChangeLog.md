@@ -2,6 +2,28 @@
 
 ---
 
+## Change Set 38 — Externalise configuration; move UI constants to module level
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `82243f2`
+
+### What was changed
+
+#### `config.py`
+- `MAX_ALERTS` (env `MAX_ALERTS`, default `10`) — max alerts to fetch and display
+- `ALERT_CACHE_TTL` (env `ALERT_CACHE_TTL`, default `120`) — alert result cache duration in seconds
+- `UI_DOC_KEYWORDS` — frozenset of keywords that force the RAG path; moving it here means routing behaviour can be tuned without touching UI code
+
+#### `ui-app.py`
+- `_SEVERITY_ICON` moved to module level (was a dict literal recreated on every `_generate_response` call)
+- `_VCF_OPS_CONFIGURED` evaluated once at startup via `os.getenv` instead of per call
+- `fetch_lab_alerts` TTL now reads `config.ALERT_CACHE_TTL`
+- Alert fetch/display loops use `config.MAX_ALERTS` instead of hardcoded `10`
+- `_DOC_KEYWORDS` removed from the file; `_is_doc_query` now references `config.UI_DOC_KEYWORDS`
+
+---
+
 ## Change Set 37 — Differentiate IMMEDIATE from CRITICAL with separate icon
 
 **Date:** 2026-06-27
