@@ -2,6 +2,24 @@
 
 ---
 
+## Change Set 30 — Skip RAG for alert queries; branch on query type before fetching
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `6ed2807`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+`_generate_response` now detects query intent before doing any data fetching. `_wants_alerts` is checked first:
+- **Alert query** → fetch live Aria Ops data only, skip RAG entirely. Status shows "Fetching live lab alerts..."
+- **Documentation query** → run RAG only, skip alert fetch. Status shows "Consulting VCF {version} library..."
+
+Previously `get_vcf_context` always ran first even for pure alert prompts like "show me any lab alert", wasting time on a documentation search that returns nothing useful for live operational data.
+
+---
+
 ## Change Set 29 — Move lab alerts from sidebar into chat via system prompt injection
 
 **Date:** 2026-06-27
