@@ -299,21 +299,13 @@ def get_vcf_context(query: str, version: str):
 
 
 # --- 8. ALERT HELPERS ---
-_ALERT_KEYWORDS = frozenset({
-    "alert", "alerts", "critical", "warning", "immediate", "information",
-    "ops", "operations", "vcf-ops", "aria", "alarm", "alarms", "issue", "issues",
-})
-
+# Doc keywords trigger the RAG path regardless of anything else.
+# Everything that isn't a doc query goes to Aria Ops when VCF_OPS_URL is configured.
 _DOC_KEYWORDS = frozenset({
     "vcf", "nsx", "vsan", "vsphere", "esxi", "vcenter", "vcentre",
     "configure", "install", "deploy", "setup", "architecture",
     "storage", "network", "cluster", "sddc", "documentation", "manual",
 })
-
-def _wants_alerts(prompt: str) -> bool:
-    """Return True when the user's prompt appears to be asking about live lab alerts."""
-    words = set(prompt.lower().replace("-", " ").split())
-    return bool(words & _ALERT_KEYWORDS)
 
 def _is_doc_query(prompt: str) -> bool:
     """Return True when the prompt explicitly references VCF documentation topics."""
@@ -340,12 +332,14 @@ def _format_alert_context(severity: str = "") -> str:
 # --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
     """Stream an assistant response and append it to session messages."""
-    # Explicit alert keywords → alert path.
-    # Follow-up with no doc keywords after an alert turn → stay on alert path.
-    # Explicit VCF/doc keywords → always switch to doc path.
-    is_alert_query = _wants_alerts(user_prompt) or (
-        st.session_state.get("last_query_type") == "alert"
-        and not _is_doc_query(user_prompt)
+    # If the prompt contains VCF/doc keywords → RAG.
+    # Otherwise, if Aria Ops is configured → live alerts (catches any natural
+    # language like "how's my lab", "any issues?", "give me a summary", etc.).
+    # Follow-up after an alert turn also stays on the alert path.
+    _vcf_ops_configured = bool(os.getenv("VCF_OPS_URL"))
+    is_alert_query = not _is_doc_query(user_prompt) and (
+        _vcf_ops_configured
+        or st.session_state.get("last_query_type") == "alert"
     )
 
     with st.chat_message("assistant"):
