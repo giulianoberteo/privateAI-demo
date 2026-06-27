@@ -192,12 +192,32 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
                 headers=headers,
             )
             response.raise_for_status()
-            data   = response.json()
-            alerts = [
-                f"- {a['resourceName']}: {a['alertDefinitionName']}"
-                for a in data.get("alerts", [])[:5]
-            ]
-            return "\n".join(alerts) if alerts else f"No {severity} alerts found."
+            data        = response.json()
+            raw_alerts  = data.get("alerts", [])
+
+            if not raw_alerts:
+                return f"No {severity} alerts found."
+
+            # Expose first alert's keys so schema can be confirmed if parsing fails
+            sample_keys = sorted(raw_alerts[0].keys()) if raw_alerts else []
+
+            lines = []
+            for a in raw_alerts[:5]:
+                resource = (
+                    a.get("resourceName")
+                    or a.get("resource", {}).get("name", "")
+                    or a.get("resourceIdentifier", "unknown-resource")
+                )
+                name = (
+                    a.get("alertDefinitionName")
+                    or a.get("alertName")
+                    or a.get("type", "unknown-alert")
+                )
+                lines.append(f"- {resource}: {name}")
+
+            result = "\n".join(lines)
+            result += f"\n\n[Debug — alert keys: {sample_keys}]"
+            return result
         except httpx.HTTPStatusError as e:
             return (
                 f"Alerts request failed — HTTP {e.response.status_code}.\n"
