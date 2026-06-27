@@ -35,6 +35,12 @@ if "rate_input" not in st.session_state:
     st.session_state.rate_input  = config.UI_COST_PER_1M_INPUT
 if "rate_output" not in st.session_state:
     st.session_state.rate_output = config.UI_COST_PER_1M_OUTPUT
+if "selected_version" not in st.session_state:
+    st.session_state.selected_version = sorted(config.VERSION_MAP.keys(), reverse=True)[0]
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = config.LLM_MODEL
+if "temp_label" not in st.session_state:
+    st.session_state.temp_label = list(config.UI_TEMP_OPTIONS.keys())[0]
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
@@ -221,54 +227,61 @@ def _token_caption(tokens: dict) -> None:
         st.caption("  ·  ".join(parts))
 
 
-# --- 5. SIDEBAR ---
-with st.sidebar:
-    st.header("Settings")
+# --- 5. TOP TOOLBAR ---
+# Narrow action buttons + a settings popover keep the full page width free for chat.
+# Widget keys write their values to st.session_state so settings survive while the popover is closed.
+_col_clear, _col_theme, _col_settings, _ = st.columns([1, 1, 2, 6])
 
-    available_versions = sorted(config.VERSION_MAP.keys(), reverse=True)
-    selected_version   = st.selectbox("VCF Version", available_versions, index=0)
-
-    available_models = get_available_models()
-    default_idx      = (
-        available_models.index(config.LLM_MODEL)
-        if config.LLM_MODEL in available_models else 0
-    )
-    selected_model = st.selectbox("Brain (LLM)", available_models, index=default_idx)
-
-    _temp_label = st.selectbox("Answer style", list(config.UI_TEMP_OPTIONS.keys()), index=0)
-    temp = config.UI_TEMP_OPTIONS[_temp_label]
-
-    st.divider()
-    st.caption("**Cloud cost shadow** *(local inference is free)*")
-    _rate_input  = st.number_input("Input $/1M tokens",  min_value=0.0, value=config.UI_COST_PER_1M_INPUT,  step=0.01, format="%.2f", key="rate_input")
-    _rate_output = st.number_input("Output $/1M tokens", min_value=0.0, value=config.UI_COST_PER_1M_OUTPUT, step=0.01, format="%.2f", key="rate_output")
-
-    if st.button("🗑️ Clear Chat", use_container_width=True):
+with _col_clear:
+    if st.button("🗑️ Clear", use_container_width=True, help="Clear chat history"):
         st.session_state.messages        = []
         st.session_state.session_tokens  = {"prompt": 0, "completion": 0}
         st.session_state.last_query_type = "docs"
         st.rerun()
 
-    _toggle_label = "☀️ Light mode" if _dark else "🌙 Dark mode"
-    if st.button(_toggle_label, use_container_width=True):
+with _col_theme:
+    if st.button("☀️" if _dark else "🌙", use_container_width=True, help="Toggle light / dark mode"):
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
 
-    session_t     = st.session_state.session_tokens
-    session_total = session_t["prompt"] + session_t["completion"]
-    if session_total > 0:
+with _col_settings:
+    with st.popover("⚙️ Settings", use_container_width=True):
+        available_versions = sorted(config.VERSION_MAP.keys(), reverse=True)
+        st.selectbox("VCF Version", available_versions, key="selected_version")
+
+        available_models = get_available_models()
+        if st.session_state.selected_model not in available_models:
+            st.session_state.selected_model = available_models[0] if available_models else config.LLM_MODEL
+        st.selectbox("Brain (LLM)", available_models, key="selected_model")
+
+        st.selectbox("Answer style", list(config.UI_TEMP_OPTIONS.keys()), key="temp_label")
+
         st.divider()
-        _cost = (
-            session_t["prompt"]     / 1_000_000 * _rate_input +
-            session_t["completion"] / 1_000_000 * _rate_output
-        )
-        st.caption(
-            f"**Session tokens**  \n"
-            f"↑ {session_t['prompt']:,} prompt  \n"
-            f"↓ {session_t['completion']:,} completion  \n"
-            f"**{session_total:,} total**  \n"
-            f"~**${_cost:.4f}** cloud equivalent"
-        )
+        st.caption("**Cloud cost shadow** *(local inference is free)*")
+        st.number_input("Input $/1M tokens",  min_value=0.0, step=0.01, format="%.2f", key="rate_input")
+        st.number_input("Output $/1M tokens", min_value=0.0, step=0.01, format="%.2f", key="rate_output")
+
+        session_t     = st.session_state.session_tokens
+        session_total = session_t["prompt"] + session_t["completion"]
+        if session_total > 0:
+            st.divider()
+            _cost = (
+                session_t["prompt"]     / 1_000_000 * st.session_state.rate_input +
+                session_t["completion"] / 1_000_000 * st.session_state.rate_output
+            )
+            st.caption(
+                f"**Session tokens**  \n"
+                f"↑ {session_t['prompt']:,} prompt  \n"
+                f"↓ {session_t['completion']:,} completion  \n"
+                f"**{session_total:,} total**  \n"
+                f"~**${_cost:.4f}** cloud equivalent"
+            )
+
+# Read current settings from session state — the popover widgets may not be rendered
+# on every rerun (only when open), so session state is the source of truth.
+selected_version = st.session_state.selected_version
+selected_model   = st.session_state.selected_model
+temp             = config.UI_TEMP_OPTIONS[st.session_state.temp_label]
 
 
 # --- 6. AUTO-CLEAR ON VERSION SWITCH ---
