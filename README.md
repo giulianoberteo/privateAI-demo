@@ -362,8 +362,14 @@ uv run streamlit run ui/ui-app.py
 
 ![streamlit-ui-startup](screenshots/standalone-AI-agent-app-startup.png "Streamlit UI start-up")
 
-And here is the AI Chat app running locally, with the version selector and model dropdown in the sidebar, answering a VCF 9 question with references to the source documentation:
-![streamlit-chat](screenshots/standalone-AI-agent-app.png "Streamlit Standalone AI Agent Chat")
+Example of the AI Chat app running locally, answering a VCF 9 question with references to the source documentation:
+![streamlit-chat](screenshots/standalone-AI-agent-app-vcf-question.png "Streamlit Standalone AI Agent - VCF 9.1 Question")
+
+Example of the AI Chat checking VCF Operations alerts in real time, with traffic-light severity icons:
+![streamlit-chat](screenshots/standalone-AI-agent-app-vcfops-alerts-check.png "Streamlit Standalone AI Agent - VCF Ops Alerts")
+
+Example of the AI Chat answering a follow-up question about the alerts, and suggesting next steps to resolve the issues:
+![streamlit-chat](screenshots/standalone-AI-agent-app-vcfops-alerts-actions.png "Streamlit Standalone AI Agent - VCF Ops Follow-up")
 
 ## Features
 
