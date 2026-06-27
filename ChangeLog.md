@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 26 — Make severity filter optional; default returns all active alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `2bbec7c`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Changed `get_lab_alerts` default from `severity="CRITICAL"` to `severity=""`. When empty, the `alertCriticality` query param is omitted entirely and Aria Ops returns all active alerts regardless of severity. Passing a severity value (CRITICAL, IMMEDIATE, WARNING, INFORMATION) still filters as before. Input is uppercased automatically so case doesn't matter.
+
+---
+
 ## Change Set 25 — Resolve human-readable resource names in get_lab_alerts
 
 **Date:** 2026-06-27
