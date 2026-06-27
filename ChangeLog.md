@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 23 — Better error reporting in get_lab_alerts
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `623147b`
+
+### What was changed
+
+#### `mcp/server.py`
+
+Improved error handling in `get_lab_alerts` to surface the exact HTTP status code, request URL, and response body for each failure point separately (token acquisition vs. alerts endpoint). Previously all failures returned a generic message that made debugging impossible.
+
+---
+
 ## Change Set 22 — Fix Aria Ops token acquisition: drop hardcoded authSource
 
 **Date:** 2026-06-27
