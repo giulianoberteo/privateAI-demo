@@ -192,32 +192,44 @@ async def get_lab_alerts(severity: str = "CRITICAL") -> str:
                 headers=headers,
             )
             response.raise_for_status()
-            data        = response.json()
-            raw_alerts  = data.get("alerts", [])
+            data       = response.json()
+            raw_alerts = data.get("alerts", [])
 
             if not raw_alerts:
                 return f"No {severity} alerts found."
 
-            # Expose first alert's keys so schema can be confirmed if parsing fails
-            sample_keys = sorted(raw_alerts[0].keys()) if raw_alerts else []
+            # Resolve resource names: Aria Ops alerts carry only a resourceId;
+            # the human-readable name lives at GET /suite-api/api/resources/{id}.
+            resource_cache: dict[str, str] = {}
+            for a in raw_alerts[:5]:
+                rid = a.get("resourceId", "")
+                if rid and rid not in resource_cache:
+                    try:
+                        r = await http.get(
+                            f"{base_url}/suite-api/api/resources/{rid}",
+                            headers=headers,
+                        )
+                        if r.status_code == 200:
+                            resource_cache[rid] = (
+                                r.json().get("resourceKey", {}).get("name", rid)
+                            )
+                        else:
+                            resource_cache[rid] = rid
+                    except Exception:
+                        resource_cache[rid] = rid
 
             lines = []
             for a in raw_alerts[:5]:
-                resource = (
-                    a.get("resourceName")
-                    or a.get("resource", {}).get("name", "")
-                    or a.get("resourceIdentifier", "unknown-resource")
-                )
-                name = (
+                rid      = a.get("resourceId", "")
+                resource = resource_cache.get(rid, rid or "unknown-resource")
+                name     = (
                     a.get("alertDefinitionName")
                     or a.get("alertName")
                     or a.get("type", "unknown-alert")
                 )
                 lines.append(f"- {resource}: {name}")
 
-            result = "\n".join(lines)
-            result += f"\n\n[Debug — alert keys: {sample_keys}]"
-            return result
+            return "\n".join(lines)
         except httpx.HTTPStatusError as e:
             return (
                 f"Alerts request failed — HTTP {e.response.status_code}.\n"
