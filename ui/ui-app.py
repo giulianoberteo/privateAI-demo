@@ -20,7 +20,7 @@ _VCF_OPS_CONFIGURED = bool(os.getenv("VCF_OPS_URL"))
 
 
 # --- 1. PAGE CONFIG ---
-st.set_page_config(page_title="VCF vArchitect Agent", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title=config.UI_PAGE_TITLE, page_icon=config.UI_PAGE_ICON, layout="wide")
 
 # --- 2. SESSION STATE INIT ---
 if "theme" not in st.session_state:
@@ -43,7 +43,7 @@ def _get_css(theme_name: str) -> str:
 
 st.markdown(_get_css("dark" if _dark else "light"), unsafe_allow_html=True)
 
-st.title("🦅 Hawk - VCF vArchitect Agent")
+st.title(config.UI_PAGE_TITLE)
 
 
 # --- 3. DATA CONNECTIONS ---

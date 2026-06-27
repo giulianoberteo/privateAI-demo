@@ -68,6 +68,10 @@ UI_SEVERITY_ICON: dict[str, str] = {
     "INFORMATION": "🟢",
 }
 
+# --- UI presentation ---
+UI_PAGE_TITLE = os.getenv("UI_PAGE_TITLE", "🦅 Hawk - VCF vArchitect Agent")
+UI_PAGE_ICON  = os.getenv("UI_PAGE_ICON",  "🛡️")
+
 # Answer-style presets shown in the sidebar temperature selector.
 UI_TEMP_OPTIONS: dict[str, float] = {
     "Precise":      0.1,
