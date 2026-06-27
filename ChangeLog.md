@@ -2,6 +2,19 @@
 
 ---
 
+## Change Set 43 — Show per-message cost estimate in token caption
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `9703daa`
+
+### What was changed
+
+#### `ui-app.py`
+`_token_caption` now appends `~$X.XXXX` to each assistant message's token line. The cost is calculated from the message's prompt and completion token counts multiplied by the rates stored in `st.session_state` (`rate_input` / `rate_output`) — the same values set by the sidebar inputs. Session state keys are pre-initialised from `config` defaults so the caption renders correctly on first load before the sidebar has been drawn.
+
+---
+
 ## Change Set 42 — Update README for alerts icons, cost shadow, and new config vars
 
 **Date:** 2026-06-27
