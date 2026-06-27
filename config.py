@@ -47,3 +47,15 @@ NUM_CTX = int(os.getenv("NUM_CTX", "32768"))
 # Maximum L2 distance for ChromaDB results; chunks above this threshold are
 # excluded from LLM context. Raise or set to inf to disable filtering.
 MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "1.0"))
+
+# --- Live alerts ---
+MAX_ALERTS       = int(os.getenv("MAX_ALERTS",       "10"))   # max alerts to fetch and display
+ALERT_CACHE_TTL  = int(os.getenv("ALERT_CACHE_TTL",  "120"))  # seconds to cache alert results
+
+# Keywords that route a chat prompt to the RAG (documentation) path instead of
+# Aria Ops. Add or remove words here to tune routing without touching the UI code.
+UI_DOC_KEYWORDS: frozenset[str] = frozenset({
+    "vcf", "nsx", "vsan", "vsphere", "esxi", "vcenter", "vcentre",
+    "configure", "install", "deploy", "setup", "architecture",
+    "storage", "network", "cluster", "sddc", "documentation", "manual",
+})

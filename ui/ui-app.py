@@ -15,6 +15,8 @@ from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 # Acquired once per server process lifetime; shared across all Streamlit sessions.
 _ops_token_ui: str = ""
 
+# Evaluated once at startup; env var doesn't change while the app is running.
+_VCF_OPS_CONFIGURED = bool(os.getenv("VCF_OPS_URL"))
 
 # --- CONSTANTS ---
 _TEMP_OPTIONS = {
@@ -23,6 +25,8 @@ _TEMP_OPTIONS = {
     "Creative":     0.7,
     "Experimental": 1.0,
 }
+
+_SEVERITY_ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🟢"}
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="VCF vArchitect Agent", page_icon="🛡️", layout="wide")
@@ -101,7 +105,7 @@ def _acquire_ops_token_sync(base_url: str, user: str, password: str) -> str:
         return _ops_token_ui
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
 def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
     """Fetch active alerts from Aria Ops and return (alerts, error_message).
 
@@ -152,7 +156,7 @@ def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
             # human-readable name. We call GET /resources/{id} for each unique
             # resource in the top-10 alerts to get the display name.
             resource_cache: dict[str, str] = {}
-            for a in raw_alerts[:10]:
+            for a in raw_alerts[:config.MAX_ALERTS]:
                 rid = a.get("resourceId", "")
                 if rid and rid not in resource_cache:
                     r = http.get(f"{base_url}/suite-api/api/resources/{rid}", headers=headers)
@@ -163,7 +167,7 @@ def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
 
             # --- Step 4: Build structured result list ---
             alerts = []
-            for a in raw_alerts[:10]:
+            for a in raw_alerts[:config.MAX_ALERTS]:
                 rid = a.get("resourceId", "")
                 alerts.append({
                     "resource":    resource_cache.get(rid, rid or "unknown"),
@@ -299,18 +303,9 @@ def get_vcf_context(query: str, version: str):
 
 
 # --- 8. ALERT HELPERS ---
-# Doc keywords trigger the RAG path regardless of anything else.
-# Everything that isn't a doc query goes to Aria Ops when VCF_OPS_URL is configured.
-_DOC_KEYWORDS = frozenset({
-    "vcf", "nsx", "vsan", "vsphere", "esxi", "vcenter", "vcentre",
-    "configure", "install", "deploy", "setup", "architecture",
-    "storage", "network", "cluster", "sddc", "documentation", "manual",
-})
-
 def _is_doc_query(prompt: str) -> bool:
     """Return True when the prompt explicitly references VCF documentation topics."""
-    words = set(prompt.lower().split())
-    return bool(words & _DOC_KEYWORDS)
+    return bool(set(prompt.lower().split()) & config.UI_DOC_KEYWORDS)
 
 
 
@@ -321,16 +316,13 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     # Otherwise, if Aria Ops is configured → live alerts (catches any natural
     # language like "how's my lab", "any issues?", "give me a summary", etc.).
     # Follow-up after an alert turn also stays on the alert path.
-    _vcf_ops_configured = bool(os.getenv("VCF_OPS_URL"))
     is_alert_query = not _is_doc_query(user_prompt) and (
-        _vcf_ops_configured
+        _VCF_OPS_CONFIGURED
         or st.session_state.get("last_query_type") == "alert"
     )
 
     with st.chat_message("assistant"):
         with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
-
-            _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🟢"}
 
             if is_alert_query:
                 # Pure alert query — skip RAG entirely, fetch live data only.
@@ -349,10 +341,10 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
                 else:
                     st.write("**Live lab alerts:**")
                     for a in raw_alerts:
-                        icon = _ICON.get(a["criticality"], "⚪")
+                        icon = _SEVERITY_ICON.get(a["criticality"], "⚪")
                         st.write(f"{icon} {a['criticality']} — **{a['resource']}**: {a['name']}")
                     alert_lines = [
-                        f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
+                        f"{_SEVERITY_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
                         for a in raw_alerts
                     ]
                     alert_context = "LIVE LAB ALERTS:\n" + "\n".join(alert_lines)
