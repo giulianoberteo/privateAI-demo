@@ -2,6 +2,23 @@
 
 ---
 
+## Change Set 39 — Move _SEVERITY_ICON and _TEMP_OPTIONS to config.py
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `097f184`
+
+### What was changed
+
+#### `config.py`
+- `UI_SEVERITY_ICON` — severity → emoji mapping for alert display
+- `UI_TEMP_OPTIONS` — answer-style label → temperature value presets for the sidebar selector
+
+#### `ui-app.py`
+- Both constants removed; all references updated to `config.UI_SEVERITY_ICON` and `config.UI_TEMP_OPTIONS`
+
+---
+
 ## Change Set 38 — Externalise configuration; move UI constants to module level
 
 **Date:** 2026-06-27
