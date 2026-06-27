@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime, timezone
 import httpx  # pyright: ignore[reportMissingImports]
 import streamlit as st
 import ollama
@@ -183,6 +184,55 @@ def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
             return [], f"{type(e).__name__}: {e}"
 
 
+@st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
+def fetch_license_info() -> tuple[dict, str]:
+    """Fetch licence info and product edition from Aria Ops. Returns (info_dict, error_message).
+
+    Calls two endpoints and merges the results:
+      GET /suite-api/api/product/licensing/info    → licensed, licenseName, expirationDate
+      GET /suite-api/api/product/licensing/edition → productLicensingEdition
+    """
+    base_url = os.getenv("VCF_OPS_URL", "")
+    user     = os.getenv("VCF_OPS_USER", "")
+    password = os.getenv("VCF_OPS_PASS", "")
+
+    if not base_url or not user:
+        return {}, "VCF_OPS_URL and VCF_OPS_USER must be set."
+
+    try:
+        token = _acquire_ops_token_sync(base_url, user, password)
+    except Exception as e:
+        return {}, f"Token acquisition failed: {e}"
+
+    headers = {"Authorization": f"OpsToken {token}", "Accept": "application/json"}
+
+    try:
+        with httpx.Client(verify=False) as http:  # noqa: S501
+            info_resp    = http.get(f"{base_url}/suite-api/api/product/licensing/info",    headers=headers)
+            edition_resp = http.get(f"{base_url}/suite-api/api/product/licensing/edition", headers=headers)
+            info_resp.raise_for_status()
+            edition_resp.raise_for_status()
+            info    = info_resp.json()
+            edition = edition_resp.json()
+    except httpx.HTTPStatusError as e:
+        return {}, f"HTTP {e.response.status_code} — {e.response.text[:200]}"
+    except Exception as e:
+        return {}, f"{type(e).__name__}: {e}"
+
+    exp_ts   = info.get("expirationDate")
+    exp_date = (
+        datetime.fromtimestamp(exp_ts / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+        if exp_ts else "N/A"
+    )
+
+    return {
+        "licensed":       info.get("licensed", False),
+        "licenseName":    info.get("licenseName", "Unknown"),
+        "expirationDate": exp_date,
+        "edition":        edition.get("productLicensingEdition", "UNKNOWN"),
+    }, ""
+
+
 @st.cache_data(ttl=30)
 def get_available_models():
     try:
@@ -332,27 +382,69 @@ def _is_doc_query(prompt: str) -> bool:
     return bool(set(prompt.lower().split()) & config.UI_DOC_KEYWORDS)
 
 
+def _is_license_query(prompt: str) -> bool:
+    """Return True when the prompt is asking about licensing or product edition."""
+    lp = prompt.lower()
+    return any(kw in lp for kw in ("licens", "edition"))
+
 
 # --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
     """Stream an assistant response and append it to session messages."""
-    # If the prompt contains VCF/doc keywords → RAG.
-    # Otherwise, if Aria Ops is configured → live alerts (catches any natural
-    # language like "how's my lab", "any issues?", "give me a summary", etc.).
-    # Follow-up after an alert turn also stays on the alert path.
-    is_alert_query = not _is_doc_query(user_prompt) and (
-        _VCF_OPS_CONFIGURED
-        or st.session_state.get("last_query_type") == "alert"
+    # Routing priority:
+    #   1. Licence query  → live licence data (if Aria Ops is configured)
+    #   2. Alert query    → live alerts      (if Aria Ops is configured or last turn was an alert)
+    #   3. Anything else  → RAG over VCF docs
+    _last = st.session_state.get("last_query_type", "docs")
+    is_license_query = (
+        (_is_license_query(user_prompt) and _VCF_OPS_CONFIGURED)
+        or (_last == "license" and not _is_doc_query(user_prompt) and _VCF_OPS_CONFIGURED)
+    )
+    is_alert_query = (
+        not is_license_query
+        and not _is_doc_query(user_prompt)
+        and (_VCF_OPS_CONFIGURED or _last == "alert")
     )
 
     with st.chat_message("assistant"):
-        with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
+        _spinner = (
+            "Checking licence status..." if is_license_query
+            else "Fetching live lab alerts..." if is_alert_query
+            else f"Consulting VCF {version} library..."
+        )
+        with st.status(_spinner) as status:
+            context         = ""
+            source_list     = []
+            alert_context   = ""
+            license_context = ""
 
-            if is_alert_query:
+            if is_license_query:
+                # Licence query — call both licensing endpoints and surface the result.
+                info, lic_err = fetch_license_info()
+                if lic_err:
+                    st.error(lic_err)
+                    license_context = f"[Licence fetch error: {lic_err}]"
+                else:
+                    licensed = "✅ Licensed" if info.get("licensed") else "❌ Not licensed"
+                    edition  = info.get("edition", "UNKNOWN")
+                    lic_name = info.get("licenseName", "Unknown")
+                    exp_date = info.get("expirationDate", "N/A")
+                    st.write("**VCF Operations licence:**")
+                    st.write(f"- **Status:** {licensed}")
+                    st.write(f"- **Edition:** {edition}")
+                    st.write(f"- **Licence name:** {lic_name}")
+                    st.write(f"- **Expires:** {exp_date}")
+                    license_context = (
+                        f"VCF OPERATIONS LICENCE:\n"
+                        f"Status: {'Licensed' if info.get('licensed') else 'Not Licensed'}\n"
+                        f"Edition: {edition}\n"
+                        f"Licence name: {lic_name}\n"
+                        f"Expiration date: {exp_date}"
+                    )
+
+            elif is_alert_query:
                 # Pure alert query — skip RAG entirely, fetch live data only.
                 raw_alerts, alert_err = fetch_lab_alerts()
-                context     = ""
-                source_list = []
 
                 # Render alerts directly in the UI so icons are always visible,
                 # regardless of how the LLM chooses to format its response.
@@ -378,7 +470,6 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
                 st.write("**References found:**")
                 for s in source_list:
                     st.write(f"- {s}")
-                alert_context = ""
 
             status.update(label="Analysing data...", state="complete")
 
@@ -397,6 +488,8 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
                 "\n\nWhen referencing alerts in your response, always start each alert line "
                 "with its severity icon: 🔴 for CRITICAL, 🟠 for IMMEDIATE, 🟡 for WARNING, 🟢 for INFORMATION."
             )
+        if license_context:
+            system_prompt += f"\n\n{license_context}"
 
         ollama_messages = [{"role": "system", "content": system_prompt}]
         ollama_messages.extend(st.session_state.messages)
@@ -450,7 +543,9 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
         "content": full_response,
         "tokens":  tokens,
     })
-    st.session_state.last_query_type = "alert" if is_alert_query else "docs"
+    st.session_state.last_query_type = (
+        "license" if is_license_query else "alert" if is_alert_query else "docs"
+    )
 
 
 # --- 10. CHAT UI ---
