@@ -338,7 +338,8 @@ And here is the AI Chat app running locally, with the version selector and model
 - **Clear Chat button** — resets the conversation without restarting the server.
 - **Full conversation memory** — the complete message history is passed to Ollama on every turn, so follow-up questions work correctly.
 - **VMware Clarity theme** — light/dark colour scheme built on the Clarity Design System construction palette with Metropolis typography. Defaults to light mode; toggle with the sidebar button, which is always visible with an accent-colour outline border.
-- **Live lab alerts** — ask the chatbot about live operational data from VCF Operations (Aria Ops) in plain English. The agent detects alert-intent automatically, fetches data directly from the Aria Ops REST API, and skips the documentation index entirely for those queries. Follow-up prompts (*"group by severity"*, *"create a table"*) continue in alert mode without re-triggering a documentation search. Set `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` before starting Streamlit to enable this feature.
+- **Live lab alerts** — ask the chatbot about live operational data from VCF Operations (Aria Ops) in plain English (*"how's my lab?"*, *"any critical alerts?"*). The agent detects operational intent automatically, fetches data directly from the Aria Ops REST API, and skips the documentation index entirely for those queries. Each alert is shown with a traffic-light severity icon (🔴 CRITICAL · 🟠 IMMEDIATE · 🟡 WARNING · 🟢 INFORMATION). Follow-up prompts (*"group by severity"*, *"create a table"*) continue in alert mode without re-triggering a documentation search. Set `VCF_OPS_URL`, `VCF_OPS_USER`, and `VCF_OPS_PASS` before starting Streamlit to enable this feature.
+- **Cloud cost shadow** — the sidebar shows a running estimate of what the session would cost on a cloud API (defaults to GPT-4o mini rates: $0.15/1M input, $0.60/1M output). The rates are editable live from the sidebar. Your actual Ollama cost is always $0.
 
 ### How it works
 
@@ -374,6 +375,12 @@ All tuneable parameters live in [`config.py`](config.py) at the project root. Ev
 | `VCF_OPS_USER` | *(unset)* | Aria Ops username, e.g. `admin@local` |
 | `VCF_OPS_PASS` | *(unset)* | Aria Ops password |
 | `VCF_OPS_AUTH_SOURCE` | *(unset)* | Auth source display name — omit for local accounts; set for LDAP (e.g. `"Imported LDAP Server"`) |
+| `MAX_ALERTS` | `10` | Max alerts to fetch and display per query |
+| `ALERT_CACHE_TTL` | `120` | Seconds before alert results are re-fetched from Aria Ops |
+| `UI_PAGE_TITLE` | `🦅 VCF vArchitect Agent` | Browser tab and page heading |
+| `UI_PAGE_ICON` | `🦅` | Browser tab favicon |
+| `UI_COST_PER_1M_INPUT` | `0.15` | Input token shadow rate in USD (cloud cost reference) |
+| `UI_COST_PER_1M_OUTPUT` | `0.60` | Output token shadow rate in USD (cloud cost reference) |
 
 Example — switch the embedding model for a single ingest run without editing any file:
 
