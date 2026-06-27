@@ -17,7 +17,7 @@ The same RAG and alert tools are exposed as a Model Context Protocol (MCP) serve
 
 ## Why fully local?
 
-Every component — PDF parsing, text chunking, vector embeddings, LLM inference, vector storage — runs on your hardware. No query, document chunk, or conversation turn leaves your machine. You can pull the Ethernet cable and it keeps working. This makes it suitable for air-gapped labs, environments with strict data-residency requirements, or simply anyone who prefers not to send internal technical documentation to a cloud API.
+Every component — PDF parsing, text chunking, vector embeddings, LLM inference, vector storage — runs on your hardware. No query, document chunk, or conversation turn leaves your machine. You can pull the Ethernet cable and it keeps working. This makes it suitable for air-gapped labs, environments with strict data-residency requirements, or simply anyone who prefers not to send corporate data to a cloud API.
 
 ## Stack at a glance
 
