@@ -2,6 +2,24 @@
 
 ---
 
+## Change Set 34 — Replace alert keyword whitelist with doc-keyword gate
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `5bfc2d7`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+The `_wants_alerts` keyword whitelist was too brittle — natural phrases like *"how's my lab"*, *"any issues?"*, or *"give me a summary"* never matched and fell through to a pointless RAG search.
+
+New routing logic: if the prompt does **not** contain VCF/documentation keywords (`_is_doc_query` returns False) **and** `VCF_OPS_URL` is configured, the query goes to Aria Ops. Only explicit VCF/doc keywords (`vcf`, `nsx`, `vsan`, `esxi`, `configure`, `cluster`, etc.) force the RAG path. The `_wants_alerts` function and `_ALERT_KEYWORDS` set are removed entirely.
+
+Result: any conversational or operational prompt routes to live alerts when Aria Ops is configured; documentation queries are the explicit opt-out.
+
+---
+
 ## Change Set 33 — Traffic-light icons for alert severity
 
 **Date:** 2026-06-27
