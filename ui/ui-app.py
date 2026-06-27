@@ -329,7 +329,7 @@ def _format_alert_context(severity: str = "") -> str:
     if not alerts:
         label = severity or "active"
         return f"[No {label} lab alerts found at this time.]"
-    _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🔵"}
+    _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🔴", "WARNING": "🟡", "INFORMATION": "🟢"}
     lines = [
         f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
         for a in alerts
