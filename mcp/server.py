@@ -128,11 +128,18 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
     global _ops_token
     if _ops_token:
         return _ops_token
+    # authSource is the display name of the auth source in Aria Ops (not the type ID).
+    # For local accounts omit it entirely; for LDAP set VCF_OPS_AUTH_SOURCE to the
+    # exact auth source name shown in Aria Ops Administration > Auth Sources.
+    auth_source = os.getenv("VCF_OPS_AUTH_SOURCE", "")
+    body: dict = {"username": user, "password": password}
+    if auth_source:
+        body["authSource"] = auth_source
     async with httpx.AsyncClient(verify=False) as http:  # noqa: S501
         resp = await http.post(
             f"{base_url}/suite-api/api/auth/token/acquire",
-            json={"username": user, "password": password, "authSource": "LOCAL"},
-            headers={"Accept": "application/json"},
+            json=body,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
         resp.raise_for_status()
         _ops_token = resp.json()["token"]
