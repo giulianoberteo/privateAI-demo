@@ -313,21 +313,6 @@ def _is_doc_query(prompt: str) -> bool:
     return bool(words & _DOC_KEYWORDS)
 
 
-def _format_alert_context(severity: str = "") -> str:
-    """Fetch live alerts and return a formatted string ready to inject into the system prompt."""
-    alerts, error = fetch_lab_alerts(severity)
-    if error:
-        return f"[Lab alert fetch error: {error}]"
-    if not alerts:
-        label = severity or "active"
-        return f"[No {label} lab alerts found at this time.]"
-    _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🔴", "WARNING": "🟡", "INFORMATION": "🟢"}
-    lines = [
-        f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
-        for a in alerts
-    ]
-    return "LIVE LAB ALERTS (fetched now from VCF Operations):\n" + "\n".join(lines)
-
 
 # --- 9. RESPONSE GENERATOR ---
 def _generate_response(user_prompt: str, version: str, model: str, temperature: float) -> None:
@@ -345,11 +330,32 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     with st.chat_message("assistant"):
         with st.status("Fetching live lab alerts..." if is_alert_query else f"Consulting VCF {version} library...") as status:
 
+            _ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🔴", "WARNING": "🟡", "INFORMATION": "🟢"}
+
             if is_alert_query:
                 # Pure alert query — skip RAG entirely, fetch live data only.
-                alert_context = _format_alert_context()
-                context       = ""
-                source_list   = []
+                raw_alerts, alert_err = fetch_lab_alerts()
+                context     = ""
+                source_list = []
+
+                # Render alerts directly in the UI so icons are always visible,
+                # regardless of how the LLM chooses to format its response.
+                if alert_err:
+                    st.error(alert_err)
+                    alert_context = f"[Lab alert fetch error: {alert_err}]"
+                elif not raw_alerts:
+                    st.write("No active alerts found.")
+                    alert_context = "[No active lab alerts found at this time.]"
+                else:
+                    st.write("**Live lab alerts:**")
+                    for a in raw_alerts:
+                        icon = _ICON.get(a["criticality"], "⚪")
+                        st.write(f"{icon} **{a['resource']}** — {a['name']} `[{a['criticality']}]`")
+                    alert_lines = [
+                        f"{_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
+                        for a in raw_alerts
+                    ]
+                    alert_context = "LIVE LAB ALERTS:\n" + "\n".join(alert_lines)
             else:
                 # Documentation query — run RAG, no alert fetch needed.
                 context, source_list = get_vcf_context(user_prompt, version)
@@ -370,7 +376,11 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
         if context:
             system_prompt += f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
         if alert_context:
-            system_prompt += f"\n\n{alert_context}"
+            system_prompt += (
+                f"\n\n{alert_context}"
+                "\n\nWhen referencing alerts in your response, always start each alert line "
+                "with its severity icon: 🔴 for CRITICAL/IMMEDIATE, 🟡 for WARNING, 🟢 for INFORMATION."
+            )
 
         ollama_messages = [{"role": "system", "content": system_prompt}]
         ollama_messages.extend(st.session_state.messages)
