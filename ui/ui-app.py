@@ -18,15 +18,6 @@ _ops_token_ui: str = ""
 # Evaluated once at startup; env var doesn't change while the app is running.
 _VCF_OPS_CONFIGURED = bool(os.getenv("VCF_OPS_URL"))
 
-# --- CONSTANTS ---
-_TEMP_OPTIONS = {
-    "Precise":      0.1,
-    "Balanced":     0.4,
-    "Creative":     0.7,
-    "Experimental": 1.0,
-}
-
-_SEVERITY_ICON = {"CRITICAL": "🔴", "IMMEDIATE": "🟠", "WARNING": "🟡", "INFORMATION": "🟢"}
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="VCF vArchitect Agent", page_icon="🛡️", layout="wide")
@@ -234,8 +225,8 @@ with st.sidebar:
     )
     selected_model = st.selectbox("Brain (LLM)", available_models, index=default_idx)
 
-    _temp_label = st.selectbox("Answer style", list(_TEMP_OPTIONS.keys()), index=0)
-    temp = _TEMP_OPTIONS[_temp_label]
+    _temp_label = st.selectbox("Answer style", list(config.UI_TEMP_OPTIONS.keys()), index=0)
+    temp = config.UI_TEMP_OPTIONS[_temp_label]
 
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages        = []
@@ -341,10 +332,10 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
                 else:
                     st.write("**Live lab alerts:**")
                     for a in raw_alerts:
-                        icon = _SEVERITY_ICON.get(a["criticality"], "⚪")
+                        icon = config.UI_SEVERITY_ICON.get(a["criticality"], "⚪")
                         st.write(f"{icon} {a['criticality']} — **{a['resource']}**: {a['name']}")
                     alert_lines = [
-                        f"{_SEVERITY_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
+                        f"{config.UI_SEVERITY_ICON.get(a['criticality'], '⚪')} [{a['criticality']}] {a['resource']}: {a['name']}"
                         for a in raw_alerts
                     ]
                     alert_context = "LIVE LAB ALERTS:\n" + "\n".join(alert_lines)

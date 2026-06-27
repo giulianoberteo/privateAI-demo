@@ -59,3 +59,19 @@ UI_DOC_KEYWORDS: frozenset[str] = frozenset({
     "configure", "install", "deploy", "setup", "architecture",
     "storage", "network", "cluster", "sddc", "documentation", "manual",
 })
+
+# Severity → emoji icon mapping for alert display.
+UI_SEVERITY_ICON: dict[str, str] = {
+    "CRITICAL":    "🔴",
+    "IMMEDIATE":   "🟠",
+    "WARNING":     "🟡",
+    "INFORMATION": "🟢",
+}
+
+# Answer-style presets shown in the sidebar temperature selector.
+UI_TEMP_OPTIONS: dict[str, float] = {
+    "Precise":      0.1,
+    "Balanced":     0.4,
+    "Creative":     0.7,
+    "Experimental": 1.0,
+}
