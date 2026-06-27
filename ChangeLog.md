@@ -2,6 +2,20 @@
 
 ---
 
+## Change Set 31 — Persist query type in session state to handle alert follow-ups
+
+**Date:** 2026-06-27
+**Branch:** `main`
+**Commit:** `12eeb7e`
+
+### What was changed
+
+#### `ui/ui-app.py`
+
+Follow-up prompts like "create a table summary" contain no alert keywords, so `_wants_alerts` returned False and the agent fell back to a RAG lookup. Fixed by persisting `last_query_type` (`"alert"` or `"docs"`) in session state after each response. The next prompt inherits the alert path unless it contains explicit VCF/documentation keywords (detected by new `_is_doc_query`), which forces a switch back to RAG. Session state key is reset when the user clears the chat.
+
+---
+
 ## Change Set 30 — Skip RAG for alert queries; branch on query type before fetching
 
 **Date:** 2026-06-27
