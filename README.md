@@ -10,7 +10,7 @@ The project combines three capabilities in a single chat interface:
 Ask any technical question about VCF 9.0 or 9.1 — architecture, networking, storage, deployment, NSX, vSAN — and the agent retrieves the most relevant passages from your local PDF library before generating an answer. Sources and page references are shown alongside every response so you can verify what you're reading.
 
 **2. Live lab health monitoring**
-Connect it to a running VCF Operations (Aria Ops) instance and ask in plain English: *"how's my lab?"*, *"any critical alerts?"*, *"what's degraded right now?"*. The agent fetches live alert data from the Aria Ops REST API, resolves resource UUIDs to human-readable names, and displays results with traffic-light severity icons (🔴 CRITICAL · 🟠 IMMEDIATE · 🟡 WARNING · 🟢 INFORMATION). Follow-up prompts like *"create a table summary"* stay in alert context without re-querying the docs.
+Connect it to a running VCF Operations (Aria Ops) instance and ask in plain English: *"how's my lab?"*, *"any critical alerts?"*, *"what's degraded right now?"*. The agent fetches live alert data from the Aria Ops REST API, resolves resource UUIDs to human-readable names, and displays results. Follow-up prompts like *"create a table summary"* stay in alert context without re-querying the docs.
 
 **3. MCP server for Claude Desktop**
 The same RAG and alert tools are exposed as a Model Context Protocol (MCP) server, so Claude Desktop (or any MCP-compatible client) can call them directly — no Streamlit required.
