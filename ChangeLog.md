@@ -2,6 +2,30 @@
 
 ---
 
+## Change Set 52 — VCF Ops credentials in Settings popover (no env vars required)
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### What was changed
+
+VCF Operations URL, username, and password can now be entered directly in the ⚙️ Settings popover. Environment variables (`VCF_OPS_URL`, `VCF_OPS_USER`, `VCF_OPS_PASS`) are still supported and pre-fill the fields on first load, but are no longer required.
+
+#### `ui/ui-app.py`
+
+| Area | Change |
+|---|---|
+| Session state init | Added `vcf_ops_url`, `vcf_ops_user`, `vcf_ops_pass` — initialised from env vars (empty string if unset) |
+| Settings popover | Added **VCF Operations connection** section with URL, Username, and Password (masked) inputs |
+| Status badge | Now reads `st.session_state.vcf_ops_url` instead of `os.getenv("VCF_OPS_URL")` |
+| `_acquire_ops_token_sync` | Added `_ops_token_for` tracking (`"base_url\|user"`) so the cached OpsToken is automatically invalidated when credentials change in the UI |
+| `_fetch_alerts_cached` | Takes `base_url, user, password` as explicit parameters — `@st.cache_data` uses them as part of the cache key, so changing credentials immediately invalidates the alert cache |
+| `_fetch_license_cached` | Same credential-as-parameter pattern |
+| `fetch_lab_alerts` / `fetch_license_info` | Updated signatures to accept and forward credentials |
+| `_generate_response` | Reads `_ops_url`, `_ops_user`, `_ops_pass` from session state and passes them to all fetch calls |
+
+---
+
 ## Change Set 51 — Fix alert routing always falling through to docs; add VCF Ops status badge
 
 **Date:** 2026-06-30

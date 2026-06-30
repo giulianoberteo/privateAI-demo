@@ -13,8 +13,9 @@ import config  # pyright: ignore[reportMissingImports]
 from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 
 # --- ARIA OPS TOKEN CACHE ---
-# Acquired once per server process lifetime; shared across all Streamlit sessions.
+# Acquired once per process lifetime; re-acquired when credentials change or a 401 is received.
 _ops_token_ui: str = ""
+_ops_token_for: str = ""  # "base_url|user" the cached token was issued for
 
 
 # --- 1. PAGE CONFIG ---
@@ -39,6 +40,12 @@ if "selected_model" not in st.session_state:
     st.session_state.selected_model = config.LLM_MODEL
 if "temp_label" not in st.session_state:
     st.session_state.temp_label = list(config.UI_TEMP_OPTIONS.keys())[0]
+if "vcf_ops_url" not in st.session_state:
+    st.session_state.vcf_ops_url  = os.getenv("VCF_OPS_URL",  "")
+if "vcf_ops_user" not in st.session_state:
+    st.session_state.vcf_ops_user = os.getenv("VCF_OPS_USER", "")
+if "vcf_ops_pass" not in st.session_state:
+    st.session_state.vcf_ops_pass = os.getenv("VCF_OPS_PASS", "")
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
@@ -85,12 +92,15 @@ def get_collection(version: str):
 def _acquire_ops_token_sync(base_url: str, user: str, password: str, force: bool = False) -> str:
     """Acquire an Aria Ops OpsToken, caching it for the process lifetime.
 
-    Pass force=True after a 401 to discard the stale token and re-authenticate.
+    The cache is invalidated when credentials change (different base_url/user)
+    or when force=True is passed (e.g. after a 401 on the alerts endpoint).
     """
-    global _ops_token_ui
-    if _ops_token_ui and not force:
+    global _ops_token_ui, _ops_token_for
+    cache_key = f"{base_url}|{user}"
+    if _ops_token_ui and _ops_token_for == cache_key and not force:
         return _ops_token_ui
-    _ops_token_ui = ""
+    _ops_token_ui  = ""
+    _ops_token_for = ""
     # authSource is the display name of the auth source in Aria Ops.
     # Omitting it (default) works for local accounts; set VCF_OPS_AUTH_SOURCE for LDAP.
     auth_source = os.getenv("VCF_OPS_AUTH_SOURCE", "")
@@ -104,28 +114,20 @@ def _acquire_ops_token_sync(base_url: str, user: str, password: str, force: bool
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
         resp.raise_for_status()
-        _ops_token_ui = resp.json()["token"]
+        _ops_token_ui  = resp.json()["token"]
+        _ops_token_for = cache_key
         return _ops_token_ui
 
 
 @st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
-def _fetch_alerts_cached(severity: str = "") -> list[dict]:
+def _fetch_alerts_cached(base_url: str, user: str, password: str, severity: str = "") -> list[dict]:
     """Fetch live alerts from Aria Ops — raises on any error so failures are never cached.
 
-    Performs one automatic retry when a 401 is received: clears the stale OpsToken,
-    re-authenticates, then re-issues the alerts request.
-
-    Steps:
-      1. Read connection details from env vars.
-      2. Acquire an OpsToken (or use a pre-encoded Basic token).
-      3. Fetch alerts with an optional severity filter; retry once on 401.
-      4. Resolve each resourceId to a human-readable name.
+    Credentials are explicit parameters so @st.cache_data invalidates when they change.
+    Performs one automatic retry on 401 (expired token).
     """
     global _ops_token_ui
-    base_url = os.getenv("VCF_OPS_URL", "")
-    user     = os.getenv("VCF_OPS_USER", "")
-    password = os.getenv("VCF_OPS_PASS", "")
-    token    = os.getenv("VCF_OPS_TOKEN", "")
+    token = os.getenv("VCF_OPS_TOKEN", "")  # Basic-auth fallback for advanced users
 
     if not base_url or (not user and not token):
         return []
@@ -178,14 +180,13 @@ def _fetch_alerts_cached(severity: str = "") -> list[dict]:
         return alerts
 
 
-def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
+def fetch_lab_alerts(base_url: str, user: str, password: str, severity: str = "") -> tuple[list[dict], str]:
     """Public wrapper around _fetch_alerts_cached.
 
-    Converts exceptions to ([], error_message) so callers always get a safe tuple.
-    Errors are NOT cached — only successful alert lists are stored by @st.cache_data.
+    Converts exceptions to ([], error_message). Errors are NOT cached.
     """
     try:
-        return _fetch_alerts_cached(severity), ""
+        return _fetch_alerts_cached(base_url, user, password, severity), ""
     except httpx.HTTPStatusError as e:
         return [], f"HTTP {e.response.status_code} — {e.response.text[:200]}"
     except Exception as e:
@@ -193,19 +194,13 @@ def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
 
 
 @st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
-def _fetch_license_cached() -> dict:
+def _fetch_license_cached(base_url: str, user: str, password: str) -> dict:
     """Fetch licence info from Aria Ops — raises on error so failures are never cached.
 
-    Calls two endpoints and merges the results:
-      GET /suite-api/api/product/licensing/info    → licensed, licenseName, expirationDate
-      GET /suite-api/api/product/licensing/edition → productLicensingEdition
+    Credentials are explicit parameters so @st.cache_data invalidates when they change.
     """
-    base_url = os.getenv("VCF_OPS_URL", "")
-    user     = os.getenv("VCF_OPS_USER", "")
-    password = os.getenv("VCF_OPS_PASS", "")
-
     if not base_url or not user:
-        raise ValueError("VCF_OPS_URL and VCF_OPS_USER must be set.")
+        raise ValueError("VCF Ops URL and username are required.")
 
     ops_token = _acquire_ops_token_sync(base_url, user, password)
     headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
@@ -231,13 +226,13 @@ def _fetch_license_cached() -> dict:
     }
 
 
-def fetch_license_info() -> tuple[dict, str]:
+def fetch_license_info(base_url: str, user: str, password: str) -> tuple[dict, str]:
     """Public wrapper around _fetch_license_cached.
 
     Converts exceptions to ({}, error_message). Errors are NOT cached.
     """
     try:
-        return _fetch_license_cached(), ""
+        return _fetch_license_cached(base_url, user, password), ""
     except httpx.HTTPStatusError as e:
         return {}, f"HTTP {e.response.status_code} — {e.response.text[:200]}"
     except Exception as e:
@@ -291,8 +286,7 @@ def _token_caption(tokens: dict) -> None:
 # --- 5. TOP TOOLBAR ---
 # Narrow action buttons + a settings popover keep the full page width free for chat.
 # Widget keys write their values to st.session_state so settings survive while the popover is closed.
-_vcf_ops_url = os.getenv("VCF_OPS_URL", "")
-_ops_status  = ("🟢 VCF Ops connected" if _vcf_ops_url else "⚪ VCF Ops not configured")
+_ops_status = ("🟢 VCF Ops connected" if st.session_state.vcf_ops_url else "⚪ VCF Ops not configured")
 _col_clear, _col_theme, _col_settings, _col_ops_status = st.columns([1, 1, 2, 6])
 
 with _col_clear:
@@ -321,6 +315,12 @@ with _col_settings:
         st.selectbox("Brain (LLM)", available_models, key="selected_model")
 
         st.selectbox("Answer style", list(config.UI_TEMP_OPTIONS.keys()), key="temp_label")
+
+        st.divider()
+        st.caption("**VCF Operations connection**")
+        st.text_input("URL", placeholder="https://vcf-ops.lab.local", key="vcf_ops_url")
+        st.text_input("Username", placeholder="admin@local", key="vcf_ops_user")
+        st.text_input("Password", type="password", key="vcf_ops_pass")
 
         st.divider()
         st.caption("**Cloud cost shadow** *(local inference is free)*")
@@ -411,16 +411,19 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     #   1. Licence query  → live licence data (if Aria Ops is configured)
     #   2. Alert query    → live alerts      (if Aria Ops is configured or last turn was an alert)
     #   3. Anything else  → RAG over VCF docs
-    _last = st.session_state.get("last_query_type", "docs")
-    _vcf_ops_configured = bool(os.getenv("VCF_OPS_URL"))
+    _last      = st.session_state.get("last_query_type", "docs")
+    _ops_url   = st.session_state.get("vcf_ops_url",  "")
+    _ops_user  = st.session_state.get("vcf_ops_user", "")
+    _ops_pass  = st.session_state.get("vcf_ops_pass", "")
+    _ops_ready = bool(_ops_url)
     is_license_query = (
-        (_is_license_query(user_prompt) and _vcf_ops_configured)
-        or (_last == "license" and not _is_doc_query(user_prompt) and _vcf_ops_configured)
+        (_is_license_query(user_prompt) and _ops_ready)
+        or (_last == "license" and not _is_doc_query(user_prompt) and _ops_ready)
     )
     is_alert_query = (
         not is_license_query
         and not _is_doc_query(user_prompt)
-        and (_vcf_ops_configured or _last == "alert")
+        and (_ops_ready or _last == "alert")
     )
 
     with st.chat_message("assistant"):
@@ -437,7 +440,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
 
             if is_license_query:
                 # Licence query — call both licensing endpoints and surface the result.
-                info, lic_err = fetch_license_info()
+                info, lic_err = fetch_license_info(_ops_url, _ops_user, _ops_pass)
                 if lic_err:
                     st.error(lic_err)
                     license_context = f"[Licence fetch error: {lic_err}]"
@@ -461,7 +464,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
 
             elif is_alert_query:
                 # Pure alert query — skip RAG entirely, fetch live data only.
-                raw_alerts, alert_err = fetch_lab_alerts()
+                raw_alerts, alert_err = fetch_lab_alerts(_ops_url, _ops_user, _ops_pass)
 
                 # Render alerts directly in the UI so icons are always visible,
                 # regardless of how the LLM chooses to format its response.
