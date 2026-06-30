@@ -349,6 +349,13 @@ with _col_settings:
         st.text_input("URL", placeholder="vcf-ops.lab.local", key="vcf_ops_url")
         st.text_input("Username", placeholder="admin@local", key="vcf_ops_user")
         st.text_input("Password", type="password", key="vcf_ops_pass")
+        if st.button("💾 Save connection", use_container_width=True):
+            _save_ops_config(
+                st.session_state.vcf_ops_url,
+                st.session_state.vcf_ops_user,
+                st.session_state.vcf_ops_pass,
+            )
+            st.success("Connection saved.")
 
         st.divider()
         st.caption("**Cloud cost shadow** *(local inference is free)*")
@@ -376,14 +383,6 @@ with _col_settings:
 selected_version = st.session_state.selected_version
 selected_model   = st.session_state.selected_model
 temp             = config.UI_TEMP_OPTIONS[st.session_state.temp_label]
-
-# Persist VCF Ops credentials to disk so they survive page refreshes.
-_save_ops_config(
-    st.session_state.vcf_ops_url,
-    st.session_state.vcf_ops_user,
-    st.session_state.vcf_ops_pass,
-)
-
 
 # --- 6. AUTO-CLEAR ON VERSION SWITCH ---
 if st.session_state.get("active_version") != selected_version:
