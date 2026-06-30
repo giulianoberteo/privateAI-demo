@@ -85,11 +85,15 @@ def get_collection(version: str):
         st.stop()
 
 
-def _acquire_ops_token_sync(base_url: str, user: str, password: str) -> str:
-    """Exchange username + password for a short-lived Aria Ops OpsToken (cached module-level)."""
+def _acquire_ops_token_sync(base_url: str, user: str, password: str, force: bool = False) -> str:
+    """Acquire an Aria Ops OpsToken, caching it for the process lifetime.
+
+    Pass force=True after a 401 to discard the stale token and re-authenticate.
+    """
     global _ops_token_ui
-    if _ops_token_ui:
+    if _ops_token_ui and not force:
         return _ops_token_ui
+    _ops_token_ui = ""
     # authSource is the display name of the auth source in Aria Ops.
     # Omitting it (default) works for local accounts; set VCF_OPS_AUTH_SOURCE for LDAP.
     auth_source = os.getenv("VCF_OPS_AUTH_SOURCE", "")
@@ -108,85 +112,92 @@ def _acquire_ops_token_sync(base_url: str, user: str, password: str) -> str:
 
 
 @st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
-def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
-    """Fetch active alerts from Aria Ops and return (alerts, error_message).
+def _fetch_alerts_cached(severity: str = "") -> list[dict]:
+    """Fetch live alerts from Aria Ops — raises on any error so failures are never cached.
 
-    Results are cached for 120 seconds. Call fetch_lab_alerts.clear() to force
-    an immediate refresh (e.g. from a Refresh button).
+    Performs one automatic retry when a 401 is received: clears the stale OpsToken,
+    re-authenticates, then re-issues the alerts request.
 
     Steps:
-      1. Read connection details from env vars (set in shell or .env before starting Streamlit).
-      2. Acquire an OpsToken via POST /suite-api/api/auth/token/acquire (cached module-level).
-      3. Fetch alerts from GET /suite-api/api/alerts with an optional severity filter.
-      4. Resolve each alert's resourceId to a human-readable name via GET /suite-api/api/resources/{id}.
+      1. Read connection details from env vars.
+      2. Acquire an OpsToken (or use a pre-encoded Basic token).
+      3. Fetch alerts with an optional severity filter; retry once on 401.
+      4. Resolve each resourceId to a human-readable name.
     """
+    global _ops_token_ui
     base_url = os.getenv("VCF_OPS_URL", "")
     user     = os.getenv("VCF_OPS_USER", "")
     password = os.getenv("VCF_OPS_PASS", "")
     token    = os.getenv("VCF_OPS_TOKEN", "")
 
-    # Return empty gracefully if Aria Ops is not configured.
     if not base_url or (not user and not token):
-        return [], ""
+        return []
 
     with httpx.Client(verify=False) as http:  # noqa: S501
-        try:
-            # --- Step 1: Authenticate ---
-            # Preferred: exchange username + password for a short-lived OpsToken.
-            # Fallback: use a pre-encoded Basic token set in VCF_OPS_TOKEN.
-            if user:
-                try:
-                    ops_token = _acquire_ops_token_sync(base_url, user, password)
-                except httpx.HTTPStatusError as e:
-                    return [], f"Token acquisition failed — HTTP {e.response.status_code}: {e.response.text[:200]}"
-                headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
-            else:
-                headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
+        # --- Step 1: Authenticate ---
+        if user:
+            ops_token = _acquire_ops_token_sync(base_url, user, password)
+            headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
+        else:
+            headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
 
-            # --- Step 2: Fetch alerts ---
-            # Without a severity filter the API returns all active alerts.
-            # With a filter it returns only alerts matching that criticality level.
-            url = f"{base_url}/suite-api/api/alerts"
-            if severity:
-                url += f"?alertCriticality={severity.upper()}"
+        # --- Step 2: Fetch alerts; retry once on 401 (expired token) ---
+        url = f"{base_url}/suite-api/api/alerts"
+        if severity:
+            url += f"?alertCriticality={severity.upper()}"
+        resp = http.get(url, headers=headers)
+
+        if resp.status_code == 401 and user:
+            # Token expired — force re-authentication and retry once.
+            ops_token = _acquire_ops_token_sync(base_url, user, password, force=True)
+            headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
             resp = http.get(url, headers=headers)
-            resp.raise_for_status()
-            raw_alerts = resp.json().get("alerts", [])
 
-            # --- Step 3: Resolve resource names ---
-            # Aria Ops alert objects contain only a resourceId (UUID), not a
-            # human-readable name. We call GET /resources/{id} for each unique
-            # resource in the top-10 alerts to get the display name.
-            resource_cache: dict[str, str] = {}
-            for a in raw_alerts[:config.MAX_ALERTS]:
-                rid = a.get("resourceId", "")
-                if rid and rid not in resource_cache:
-                    r = http.get(f"{base_url}/suite-api/api/resources/{rid}", headers=headers)
-                    resource_cache[rid] = (
-                        r.json().get("resourceKey", {}).get("name", rid)
-                        if r.status_code == 200 else rid
-                    )
+        resp.raise_for_status()
+        raw_alerts = resp.json().get("alerts", [])
 
-            # --- Step 4: Build structured result list ---
-            alerts = []
-            for a in raw_alerts[:config.MAX_ALERTS]:
-                rid = a.get("resourceId", "")
-                alerts.append({
-                    "resource":    resource_cache.get(rid, rid or "unknown"),
-                    "name":        a.get("alertDefinitionName") or a.get("alertName") or a.get("type", "unknown"),
-                    "criticality": a.get("criticality", a.get("alertLevel", "")).upper(),
-                })
-            return alerts, ""
+        # --- Step 3: Resolve resource names ---
+        # Aria Ops alert objects contain only a resourceId (UUID). We call
+        # GET /resources/{id} for each unique resource to get the display name.
+        resource_cache: dict[str, str] = {}
+        for a in raw_alerts[:config.MAX_ALERTS]:
+            rid = a.get("resourceId", "")
+            if rid and rid not in resource_cache:
+                r = http.get(f"{base_url}/suite-api/api/resources/{rid}", headers=headers)
+                resource_cache[rid] = (
+                    r.json().get("resourceKey", {}).get("name", rid)
+                    if r.status_code == 200 else rid
+                )
 
-        except httpx.HTTPStatusError as e:
-            return [], f"HTTP {e.response.status_code} — {e.response.text[:200]}"
-        except Exception as e:
-            return [], f"{type(e).__name__}: {e}"
+        # --- Step 4: Build structured result list ---
+        alerts = []
+        for a in raw_alerts[:config.MAX_ALERTS]:
+            rid = a.get("resourceId", "")
+            alerts.append({
+                "resource":    resource_cache.get(rid, rid or "unknown"),
+                "name":        a.get("alertDefinitionName") or a.get("alertName") or a.get("type", "unknown"),
+                "criticality": a.get("criticality", a.get("alertLevel", "")).upper(),
+            })
+        return alerts
+
+
+def fetch_lab_alerts(severity: str = "") -> tuple[list[dict], str]:
+    """Public wrapper around _fetch_alerts_cached.
+
+    Converts exceptions to ([], error_message) so callers always get a safe tuple.
+    Errors are NOT cached — only successful alert lists are stored by @st.cache_data.
+    """
+    try:
+        return _fetch_alerts_cached(severity), ""
+    except httpx.HTTPStatusError as e:
+        return [], f"HTTP {e.response.status_code} — {e.response.text[:200]}"
+    except Exception as e:
+        return [], f"{type(e).__name__}: {e}"
 
 
 @st.cache_data(ttl=config.ALERT_CACHE_TTL, show_spinner=False)
-def fetch_license_info() -> tuple[dict, str]:
-    """Fetch licence info and product edition from Aria Ops. Returns (info_dict, error_message).
+def _fetch_license_cached() -> dict:
+    """Fetch licence info from Aria Ops — raises on error so failures are never cached.
 
     Calls two endpoints and merges the results:
       GET /suite-api/api/product/licensing/info    → licensed, licenseName, expirationDate
@@ -197,40 +208,43 @@ def fetch_license_info() -> tuple[dict, str]:
     password = os.getenv("VCF_OPS_PASS", "")
 
     if not base_url or not user:
-        return {}, "VCF_OPS_URL and VCF_OPS_USER must be set."
+        raise ValueError("VCF_OPS_URL and VCF_OPS_USER must be set.")
 
-    try:
-        token = _acquire_ops_token_sync(base_url, user, password)
-    except Exception as e:
-        return {}, f"Token acquisition failed: {e}"
+    ops_token = _acquire_ops_token_sync(base_url, user, password)
+    headers = {"Authorization": f"OpsToken {ops_token}", "Accept": "application/json"}
 
-    headers = {"Authorization": f"OpsToken {token}", "Accept": "application/json"}
-
-    try:
-        with httpx.Client(verify=False) as http:  # noqa: S501
-            info_resp    = http.get(f"{base_url}/suite-api/api/product/licensing/info",    headers=headers)
-            edition_resp = http.get(f"{base_url}/suite-api/api/product/licensing/edition", headers=headers)
-            info_resp.raise_for_status()
-            edition_resp.raise_for_status()
-            info    = info_resp.json()
-            edition = edition_resp.json()
-    except httpx.HTTPStatusError as e:
-        return {}, f"HTTP {e.response.status_code} — {e.response.text[:200]}"
-    except Exception as e:
-        return {}, f"{type(e).__name__}: {e}"
+    with httpx.Client(verify=False) as http:  # noqa: S501
+        info_resp    = http.get(f"{base_url}/suite-api/api/product/licensing/info",    headers=headers)
+        edition_resp = http.get(f"{base_url}/suite-api/api/product/licensing/edition", headers=headers)
+        info_resp.raise_for_status()
+        edition_resp.raise_for_status()
+        info    = info_resp.json()
+        edition = edition_resp.json()
 
     exp_ts   = info.get("expirationDate")
     exp_date = (
         datetime.fromtimestamp(exp_ts / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
         if exp_ts else "N/A"
     )
-
     return {
         "licensed":       info.get("licensed", False),
         "licenseName":    info.get("licenseName", "Unknown"),
         "expirationDate": exp_date,
         "edition":        edition.get("productLicensingEdition", "UNKNOWN"),
-    }, ""
+    }
+
+
+def fetch_license_info() -> tuple[dict, str]:
+    """Public wrapper around _fetch_license_cached.
+
+    Converts exceptions to ({}, error_message). Errors are NOT cached.
+    """
+    try:
+        return _fetch_license_cached(), ""
+    except httpx.HTTPStatusError as e:
+        return {}, f"HTTP {e.response.status_code} — {e.response.text[:200]}"
+    except Exception as e:
+        return {}, f"{type(e).__name__}: {e}"
 
 
 @st.cache_data(ttl=30)
@@ -476,6 +490,8 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
         if is_alert_query:
             system_prompt = (
                 "You are a VCF Operations monitoring assistant. "
+                "Check the live alerts of my SDDC."
+                "Check the alerts in my lab."
                 "Summarize the live lab alerts provided below. "
                 "Group by severity, highlight the most critical issues first, "
                 "and suggest remediation steps where applicable. "

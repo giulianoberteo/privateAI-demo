@@ -2,6 +2,36 @@
 
 ---
 
+## Change Set 50 — Fix stale OpsToken causing permanent auth failure on live alerts
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### Problem
+
+After several hours of running, all live-alert and licence queries silently failed — the app returned a cached 401 error and the LLM responded with an auth failure message instead of live data. Restarting Streamlit was the only workaround.
+
+### Root causes
+
+| # | Bug | Location |
+|---|---|---|
+| 1 | `_acquire_ops_token_sync` never cleared `_ops_token_ui` when the OpsToken expired. `if _ops_token_ui:` short-circuited every call, returning the stale dead token. | `ui-app.py` |
+| 2 | `fetch_lab_alerts` and `fetch_license_info` were decorated with `@st.cache_data`. When a call failed (e.g. 401 from the alerts endpoint), the error tuple `([], "HTTP 401 — ...")` was cached for the full TTL (120 s). Every retry within that window returned the cached failure without hitting the network. | `ui-app.py` |
+
+### Fix
+
+**`_acquire_ops_token_sync`** — added `force: bool = False` parameter. When `force=True`, `_ops_token_ui` is cleared before re-authenticating. Callers pass `force=True` after a 401.
+
+**`fetch_lab_alerts`** — split into two functions:
+- `_fetch_alerts_cached(severity)` — decorated with `@st.cache_data`; **raises** exceptions instead of returning error tuples, so `@st.cache_data` never stores failures; includes automatic 401 retry (clear stale token → re-authenticate → retry request).
+- `fetch_lab_alerts(severity)` — public wrapper; catches exceptions from `_fetch_alerts_cached` and converts them to the original `(alerts, error)` tuple. Only successful alert lists are cached.
+
+**`fetch_license_info`** — same raise-on-error / wrapper pattern applied:
+- `_fetch_license_cached()` raises on error (never cached on failure).
+- `fetch_license_info()` wraps and converts exceptions.
+
+---
+
 ## Change Set 49 — Fix alert queries returning VCF Architect-style responses
 
 **Date:** 2026-06-30
