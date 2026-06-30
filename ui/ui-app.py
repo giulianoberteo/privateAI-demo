@@ -16,9 +16,6 @@ from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 # Acquired once per server process lifetime; shared across all Streamlit sessions.
 _ops_token_ui: str = ""
 
-# Evaluated once at startup; env var doesn't change while the app is running.
-_VCF_OPS_CONFIGURED = bool(os.getenv("VCF_OPS_URL"))
-
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title=config.UI_PAGE_TITLE, page_icon=config.UI_PAGE_ICON, layout="wide")
@@ -294,7 +291,9 @@ def _token_caption(tokens: dict) -> None:
 # --- 5. TOP TOOLBAR ---
 # Narrow action buttons + a settings popover keep the full page width free for chat.
 # Widget keys write their values to st.session_state so settings survive while the popover is closed.
-_col_clear, _col_theme, _col_settings, _ = st.columns([1, 1, 2, 6])
+_vcf_ops_url = os.getenv("VCF_OPS_URL", "")
+_ops_status  = ("🟢 VCF Ops connected" if _vcf_ops_url else "⚪ VCF Ops not configured")
+_col_clear, _col_theme, _col_settings, _col_ops_status = st.columns([1, 1, 2, 6])
 
 with _col_clear:
     if st.button("🗑️ Clear", use_container_width=True, help="Clear chat history"):
@@ -307,6 +306,9 @@ with _col_theme:
     if st.button("☀️ Light" if _dark else "🌙 Dark", use_container_width=True, help="Toggle light / dark mode"):
         st.session_state.theme = "light" if _dark else "dark"
         st.rerun()
+
+with _col_ops_status:
+    st.caption(_ops_status)
 
 with _col_settings:
     with st.popover("⚙️ Settings", use_container_width=True):
@@ -410,14 +412,15 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     #   2. Alert query    → live alerts      (if Aria Ops is configured or last turn was an alert)
     #   3. Anything else  → RAG over VCF docs
     _last = st.session_state.get("last_query_type", "docs")
+    _vcf_ops_configured = bool(os.getenv("VCF_OPS_URL"))
     is_license_query = (
-        (_is_license_query(user_prompt) and _VCF_OPS_CONFIGURED)
-        or (_last == "license" and not _is_doc_query(user_prompt) and _VCF_OPS_CONFIGURED)
+        (_is_license_query(user_prompt) and _vcf_ops_configured)
+        or (_last == "license" and not _is_doc_query(user_prompt) and _vcf_ops_configured)
     )
     is_alert_query = (
         not is_license_query
         and not _is_doc_query(user_prompt)
-        and (_VCF_OPS_CONFIGURED or _last == "alert")
+        and (_vcf_ops_configured or _last == "alert")
     )
 
     with st.chat_message("assistant"):

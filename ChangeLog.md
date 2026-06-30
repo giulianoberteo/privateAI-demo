@@ -2,6 +2,29 @@
 
 ---
 
+## Change Set 51 — Fix alert routing always falling through to docs; add VCF Ops status badge
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### Problem
+
+Asking "check my lab for alerts" (or any operational prompt) always routed to the VCF documentation path, never calling the Aria Ops API.
+
+### Root cause
+
+`_VCF_OPS_CONFIGURED = bool(os.getenv("VCF_OPS_URL"))` was evaluated **once at module load time**. If `VCF_OPS_URL` was not present in the environment at that exact moment (e.g. the var was set in a different shell, or after the process started), the constant was permanently `False`. The routing guard `and (_VCF_OPS_CONFIGURED or _last == "alert")` then blocked every alert query for the entire lifetime of the process.
+
+### Fix
+
+#### `ui/ui-app.py`
+
+- Removed module-level `_VCF_OPS_CONFIGURED` constant.
+- In `_generate_response`, evaluate `_vcf_ops_configured = bool(os.getenv("VCF_OPS_URL"))` at routing time so it always reflects the current process environment.
+- Added **🟢 VCF Ops connected / ⚪ VCF Ops not configured** status badge to the top toolbar (fourth column), making it immediately visible whether the env var is being picked up.
+
+---
+
 ## Change Set 50 — Fix stale OpsToken causing permanent auth failure on live alerts
 
 **Date:** 2026-06-30
