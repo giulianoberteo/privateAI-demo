@@ -2,6 +2,35 @@
 
 ---
 
+## Change Set 49 — Fix alert queries returning VCF Architect-style responses
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### Problem
+
+Asking "check my lab for alerts" (or any operational prompt) returned a response written in a VCF Architect tone — e.g. architecture recommendations — instead of summarising live alert data. The alert data was fetched correctly, but the LLM persona was wrong.
+
+### Root cause
+
+`_generate_response()` in `ui-app.py` always set the same system prompt regardless of routing:
+```
+"You are a Senior VCF {version} Architect. Answer using only the context provided below..."
+```
+Even when `is_alert_query = True` and alert data was injected into the context, the architect persona biased the model to respond with architectural content.
+
+### Fix
+
+`ui/ui-app.py` — `_generate_response()` system prompt now branches on query type:
+
+| Query type | Persona |
+|---|---|
+| `is_alert_query` | VCF Operations monitoring assistant — summarises alerts, groups by severity, suggests remediation |
+| `is_license_query` | VCF Operations licensing assistant — reports licence status from live data |
+| docs (default) | Senior VCF {version} Architect — unchanged |
+
+---
+
 ## Change Set 48 — Live licence status query in UI chat
 
 **Date:** 2026-06-27

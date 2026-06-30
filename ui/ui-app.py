@@ -473,12 +473,27 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
 
             status.update(label="Analysing data...", state="complete")
 
-        system_prompt = (
-            f"You are a Senior VCF {version} Architect. "
-            "Answer using only the context provided below. "
-            "Quote specific hardware specs or CLI commands exactly as they appear. "
-            "If the answer is not in the context, say so clearly. "
-        )
+        if is_alert_query:
+            system_prompt = (
+                "You are a VCF Operations monitoring assistant. "
+                "Summarize the live lab alerts provided below. "
+                "Group by severity, highlight the most critical issues first, "
+                "and suggest remediation steps where applicable. "
+                "Do not invent alerts not listed in the context. "
+            )
+        elif is_license_query:
+            system_prompt = (
+                "You are a VCF Operations licensing assistant. "
+                "Report the licence status from the data provided below. "
+                "Do not invent information not present in the context. "
+            )
+        else:
+            system_prompt = (
+                f"You are a Senior VCF {version} Architect. "
+                "Answer using only the context provided below. "
+                "Quote specific hardware specs or CLI commands exactly as they appear. "
+                "If the answer is not in the context, say so clearly. "
+            )
 
         if context:
             system_prompt += f"\n\nCONTEXT FROM VCF {version} MANUALS:\n{context}"
