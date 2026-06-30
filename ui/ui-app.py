@@ -18,6 +18,14 @@ from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
 _OPS_CONFIG_FILE = Path(__file__).resolve().parent / ".vcf_ops_config.json"
 
 
+def _normalise_ops_url(raw: str) -> str:
+    """Prepend https:// if the user typed a bare FQDN (no scheme)."""
+    raw = raw.strip().rstrip("/")
+    if raw and not raw.startswith(("http://", "https://")):
+        raw = f"https://{raw}"
+    return raw
+
+
 def _load_ops_config() -> dict:
     try:
         return json.loads(_OPS_CONFIG_FILE.read_text())
@@ -306,7 +314,7 @@ def _token_caption(tokens: dict) -> None:
 # --- 5. TOP TOOLBAR ---
 # Narrow action buttons + a settings popover keep the full page width free for chat.
 # Widget keys write their values to st.session_state so settings survive while the popover is closed.
-_ops_status = ("🟢 VCF Ops connected" if st.session_state.vcf_ops_url else "⚪ VCF Ops not configured")
+_ops_status = ("🟢 VCF Ops connected" if _normalise_ops_url(st.session_state.vcf_ops_url) else "⚪ VCF Ops not configured")
 _col_clear, _col_theme, _col_settings, _col_ops_status = st.columns([1, 1, 2, 6])
 
 with _col_clear:
@@ -338,7 +346,7 @@ with _col_settings:
 
         st.divider()
         st.caption("**VCF Operations connection**")
-        st.text_input("URL", placeholder="https://vcf-ops.lab.local", key="vcf_ops_url")
+        st.text_input("URL", placeholder="vcf-ops.lab.local", key="vcf_ops_url")
         st.text_input("Username", placeholder="admin@local", key="vcf_ops_user")
         st.text_input("Password", type="password", key="vcf_ops_pass")
 
@@ -444,7 +452,7 @@ def _generate_response(user_prompt: str, version: str, model: str, temperature: 
     #   2. Alert query    → live alerts      (if Aria Ops is configured or last turn was an alert)
     #   3. Anything else  → RAG over VCF docs
     _last      = st.session_state.get("last_query_type", "docs")
-    _ops_url   = st.session_state.get("vcf_ops_url",  "")
+    _ops_url   = _normalise_ops_url(st.session_state.get("vcf_ops_url",  ""))
     _ops_user  = st.session_state.get("vcf_ops_user", "")
     _ops_pass  = st.session_state.get("vcf_ops_pass", "")
     _ops_ready = bool(_ops_url)
