@@ -73,7 +73,7 @@ if "vcf_ops_url" not in st.session_state:
     _cfg = _load_ops_config()
     st.session_state.vcf_ops_url  = _cfg.get("url",  os.getenv("VCF_OPS_URL",  ""))
     st.session_state.vcf_ops_user = _cfg.get("user", os.getenv("VCF_OPS_USER", ""))
-    st.session_state.vcf_ops_pass = _cfg.get("pass", os.getenv("VCF_OPS_PASS", ""))
+    st.session_state.vcf_ops_pass = _cfg.get("password", os.getenv("VCF_OPS_PASS", ""))
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
