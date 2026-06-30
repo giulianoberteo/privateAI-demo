@@ -315,22 +315,7 @@ def _token_caption(tokens: dict) -> None:
 # Narrow action buttons + a settings popover keep the full page width free for chat.
 # Widget keys write their values to st.session_state so settings survive while the popover is closed.
 _ops_status = ("🟢 VCF Ops connected" if _normalise_ops_url(st.session_state.vcf_ops_url) else "⚪ VCF Ops not configured")
-_col_clear, _col_theme, _col_settings, _col_ops_status = st.columns([1, 1, 2, 6])
-
-with _col_clear:
-    if st.button("🗑️ Clear", use_container_width=True, help="Clear chat history"):
-        st.session_state.messages        = []
-        st.session_state.session_tokens  = {"prompt": 0, "completion": 0}
-        st.session_state.last_query_type = "docs"
-        st.rerun()
-
-with _col_theme:
-    if st.button("☀️ Light" if _dark else "🌙 Dark", use_container_width=True, help="Toggle light / dark mode"):
-        st.session_state.theme = "light" if _dark else "dark"
-        st.rerun()
-
-with _col_ops_status:
-    st.caption(_ops_status)
+_col_settings, _col_clear, _col_theme, _col_ops_status = st.columns([2, 2, 2, 4])
 
 with _col_settings:
     with st.popover("⚙️ Settings", use_container_width=True):
@@ -377,6 +362,21 @@ with _col_settings:
                 f"**{session_total:,} total**  \n"
                 f"~**${_cost:.4f}** cloud equivalent"
             )
+
+with _col_clear:
+    if st.button("🗑️ Clear", use_container_width=True, help="Clear chat history"):
+        st.session_state.messages        = []
+        st.session_state.session_tokens  = {"prompt": 0, "completion": 0}
+        st.session_state.last_query_type = "docs"
+        st.rerun()
+
+with _col_theme:
+    if st.button("☀️ Light" if _dark else "🌙 Dark", use_container_width=True, help="Toggle light / dark mode"):
+        st.session_state.theme = "light" if _dark else "dark"
+        st.rerun()
+
+with _col_ops_status:
+    st.caption(_ops_status)
 
 # Read current settings from session state — the popover widgets may not be rendered
 # on every rerun (only when open), so session state is the source of truth.
