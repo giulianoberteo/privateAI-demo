@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -11,6 +12,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # pyright: ignore[reportMissingImports]
 from themes import PALETTES, build_css  # pyright: ignore[reportMissingImports]
+
+# --- PERSISTENT CONNECTION CONFIG ---
+# Credentials typed in the Settings popover are saved here so they survive page refreshes.
+_OPS_CONFIG_FILE = Path(__file__).resolve().parent / ".vcf_ops_config.json"
+
+
+def _load_ops_config() -> dict:
+    try:
+        return json.loads(_OPS_CONFIG_FILE.read_text())
+    except Exception:
+        return {}
+
+
+def _save_ops_config(url: str, user: str, password: str) -> None:
+    try:
+        _OPS_CONFIG_FILE.write_text(
+            json.dumps({"url": url, "user": user, "password": password})
+        )
+    except Exception:
+        pass
 
 # --- ARIA OPS TOKEN CACHE ---
 # Acquired once per process lifetime; re-acquired when credentials change or a 401 is received.
@@ -41,11 +62,10 @@ if "selected_model" not in st.session_state:
 if "temp_label" not in st.session_state:
     st.session_state.temp_label = list(config.UI_TEMP_OPTIONS.keys())[0]
 if "vcf_ops_url" not in st.session_state:
-    st.session_state.vcf_ops_url  = os.getenv("VCF_OPS_URL",  "")
-if "vcf_ops_user" not in st.session_state:
-    st.session_state.vcf_ops_user = os.getenv("VCF_OPS_USER", "")
-if "vcf_ops_pass" not in st.session_state:
-    st.session_state.vcf_ops_pass = os.getenv("VCF_OPS_PASS", "")
+    _cfg = _load_ops_config()
+    st.session_state.vcf_ops_url  = _cfg.get("url",  os.getenv("VCF_OPS_URL",  ""))
+    st.session_state.vcf_ops_user = _cfg.get("user", os.getenv("VCF_OPS_USER", ""))
+    st.session_state.vcf_ops_pass = _cfg.get("pass", os.getenv("VCF_OPS_PASS", ""))
 
 # --- THEME ---
 _dark = st.session_state.theme == "dark"
@@ -348,6 +368,13 @@ with _col_settings:
 selected_version = st.session_state.selected_version
 selected_model   = st.session_state.selected_model
 temp             = config.UI_TEMP_OPTIONS[st.session_state.temp_label]
+
+# Persist VCF Ops credentials to disk so they survive page refreshes.
+_save_ops_config(
+    st.session_state.vcf_ops_url,
+    st.session_state.vcf_ops_user,
+    st.session_state.vcf_ops_pass,
+)
 
 
 # --- 6. AUTO-CLEAR ON VERSION SWITCH ---

@@ -15,3 +15,6 @@ ui/rag/chroma_db/chroma.sqlite3
 
 .gitignore
 *.pptx
+
+# Local VCF Ops credentials (saved by the Settings popover)
+ui/.vcf_ops_config.json

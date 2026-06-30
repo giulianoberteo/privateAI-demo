@@ -2,6 +2,30 @@
 
 ---
 
+## Change Set 54 — Persist VCF Ops credentials across page refreshes
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### Problem
+
+VCF Operations URL, username, and password typed in the Settings popover were lost on every browser page refresh because Streamlit session state is not persistent.
+
+### Fix
+
+#### `ui/ui-app.py`
+
+- `_load_ops_config()` — reads `ui/.vcf_ops_config.json`; returns empty dict on any error (file missing, corrupt JSON, permission denied).
+- `_save_ops_config(url, user, password)` — writes the three values to `ui/.vcf_ops_config.json`; silently ignores write errors.
+- **Session state init** — on first load, the three keys are seeded from the saved config file, falling back to env vars, then empty string. Priority order: saved file → env var → empty.
+- **Auto-save** — called once per Streamlit rerun, immediately after the toolbar/popover block writes its values to session state. No save button required.
+
+#### `.gitignore`
+
+Added `ui/.vcf_ops_config.json` so credentials are never committed to git.
+
+---
+
 ## Change Set 53 — Fix alert routing broken by product names in doc-keyword gate
 
 **Date:** 2026-06-30
