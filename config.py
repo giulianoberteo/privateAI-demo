@@ -52,12 +52,24 @@ MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "1.0"))
 MAX_ALERTS       = int(os.getenv("MAX_ALERTS",       "10"))   # max alerts to fetch and display
 ALERT_CACHE_TTL  = int(os.getenv("ALERT_CACHE_TTL",  "120"))  # seconds to cache alert results
 
-# Keywords that route a chat prompt to the RAG (documentation) path instead of
-# Aria Ops. Add or remove words here to tune routing without touching the UI code.
+# Words that signal the user is asking about VCF *documentation* (architecture,
+# installation, configuration) rather than live operational data.
+# Deliberately excludes product/component names (sddc, nsx, vsan, cluster…)
+# because those appear equally in operational questions like "any nsx alerts?".
 UI_DOC_KEYWORDS: frozenset[str] = frozenset({
-    "vcf", "nsx", "vsan", "vsphere", "esxi", "vcenter", "vcentre",
-    "configure", "install", "deploy", "setup", "architecture",
-    "storage", "network", "cluster", "sddc", "documentation", "manual",
+    "configure", "install", "deploy", "setup",
+    "architecture", "documentation", "manual", "blueprint", "design",
+})
+
+# Words that signal an *operational/alert* intent. When any of these appear,
+# the alert path is taken even if doc keywords are also present — e.g.
+# "Do I have any alerts in my SDDC?" contains "sddc" (now NOT a doc keyword)
+# but "alerts" wins and routes to Aria Ops.
+UI_ALERT_KEYWORDS: frozenset[str] = frozenset({
+    "alert", "alerts", "alarm", "alarms",
+    "health", "issue", "issues", "problem", "problems",
+    "critical", "warning", "warnings", "degraded", "down",
+    "fault", "faults", "monitoring", "ops", "operations",
 })
 
 # Severity → emoji icon mapping for alert display.

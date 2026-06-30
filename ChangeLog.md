@@ -2,6 +2,38 @@
 
 ---
 
+## Change Set 53 — Fix alert routing broken by product names in doc-keyword gate
+
+**Date:** 2026-06-30
+**Branch:** `main`
+
+### Problem
+
+Prompts like *"Do I have any alerts in my SDDC now?"* or *"any NSX alerts?"* routed to VCF documentation instead of Aria Ops because `UI_DOC_KEYWORDS` contained product/component names (`sddc`, `nsx`, `vsan`, `cluster`, `network`, `storage`, etc.) that appear equally in operational questions.
+
+### Fix
+
+#### `config.py`
+
+- `UI_DOC_KEYWORDS` stripped down to pure *action/intent* words: `configure`, `install`, `deploy`, `setup`, `architecture`, `documentation`, `manual`, `blueprint`, `design`. Product names removed.
+- New `UI_ALERT_KEYWORDS` frozenset: `alert`, `alerts`, `alarm`, `health`, `issue`, `issues`, `problem`, `critical`, `warning`, `degraded`, `down`, `fault`, `monitoring`, `ops`, `operations`.
+
+#### `ui/ui-app.py` — `_is_doc_query()`
+
+Now returns `True` only when doc keywords are present **and** no alert keywords are present. Alert-intent words always override the doc gate, so *"any nsx alerts?"* routes to Aria Ops even though "nsx" would previously have triggered the docs path.
+
+### Routing examples after fix
+
+| Prompt | Route |
+|---|---|
+| *"Do I have any alerts in my SDDC now?"* | ✅ Aria Ops alerts |
+| *"any NSX alerts?"* | ✅ Aria Ops alerts |
+| *"vSAN health?"* | ✅ Aria Ops alerts |
+| *"how do I configure NSX?"* | ✅ VCF docs |
+| *"what's the VCF architecture?"* | ✅ VCF docs |
+
+---
+
 ## Change Set 52 — VCF Ops credentials in Settings popover (no env vars required)
 
 **Date:** 2026-06-30

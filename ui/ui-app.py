@@ -394,8 +394,13 @@ def get_vcf_context(query: str, version: str):
 
 # --- 8. ALERT HELPERS ---
 def _is_doc_query(prompt: str) -> bool:
-    """Return True when the prompt explicitly references VCF documentation topics."""
-    return bool(set(prompt.lower().split()) & config.UI_DOC_KEYWORDS)
+    """Return True when the prompt contains doc-intent keywords AND no alert-intent keywords.
+
+    Alert-intent words (alert, health, issue…) always win over doc-keyword matches so
+    that prompts like "any nsx alerts?" or "sddc health?" route to Aria Ops, not the RAG.
+    """
+    words = set(prompt.lower().split())
+    return bool(words & config.UI_DOC_KEYWORDS) and not bool(words & config.UI_ALERT_KEYWORDS)
 
 
 def _is_license_query(prompt: str) -> bool:
