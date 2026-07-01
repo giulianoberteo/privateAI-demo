@@ -135,7 +135,7 @@ async def _acquire_ops_token(base_url: str, user: str, password: str) -> str:
     body: dict = {"username": user, "password": password}
     if auth_source:
         body["authSource"] = auth_source
-    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501
+    async with httpx.AsyncClient(verify=config.VCF_OPS_VERIFY_SSL) as http:  # noqa: S501
         resp = await http.post(
             f"{base_url}/suite-api/api/auth/token/acquire",
             json=body,
@@ -170,7 +170,7 @@ async def get_lab_alerts(severity: str = "") -> str:
     """
     # Read connection details and credentials from environment variables.
     # These are injected by Claude Desktop from the "env" block in claude_desktop_config.json.
-    base_url = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
+    base_url = config.VCF_OPS_URL
     user     = os.getenv("VCF_OPS_USER", "")
     password = os.getenv("VCF_OPS_PASS", "")
     token    = os.getenv("VCF_OPS_TOKEN", "")  # fallback: pre-acquired Base64 Basic token
@@ -182,8 +182,9 @@ async def get_lab_alerts(severity: str = "") -> str:
             "(recommended) or VCF_OPS_TOKEN."
         )
 
-    # verify=False because lab Aria Ops uses a self-signed TLS certificate.
-    async with httpx.AsyncClient(verify=False) as http:  # noqa: S501
+    # config.VCF_OPS_VERIFY_SSL defaults to False because lab Aria Ops uses a
+    # self-signed TLS certificate; override via VCF_OPS_VERIFY_SSL env var.
+    async with httpx.AsyncClient(verify=config.VCF_OPS_VERIFY_SSL) as http:  # noqa: S501
         try:
             # --- Step 1: Authenticate ---
             # Preferred: exchange username + password for a short-lived OpsToken.
@@ -246,21 +247,15 @@ async def get_lab_alerts(severity: str = "") -> str:
                         resource_cache[rid] = rid
 
             # --- Step 4: Build severity summary and format per-alert lines ---
-            # Severity icons match the UI so Claude's text output can use them too.
-            ICONS = {
-                "CRITICAL":    "🔴",
-                "IMMEDIATE":   "🟠",
-                "WARNING":     "🟡",
-                "INFORMATION": "🟢",
-            }
-
+            # Severity icons match the UI (config.UI_SEVERITY_ICON) so Claude's
+            # text output stays consistent with the Streamlit app.
             counts: dict[str, int] = {}
             lines:  list[str]      = []
             for a in alerts_to_show:
                 rid         = a.get("resourceId", "")
                 resource    = resource_cache.get(rid, rid or "unknown-resource")
                 criticality = (a.get("criticality") or a.get("alertLevel") or "UNKNOWN").upper()
-                icon        = ICONS.get(criticality, "⚪")
+                icon        = config.UI_SEVERITY_ICON.get(criticality, "⚪")
                 # alertDefinitionName is the standard field; fall back to older field names.
                 name = (
                     a.get("alertDefinitionName")

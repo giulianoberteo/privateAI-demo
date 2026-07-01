@@ -421,10 +421,11 @@ All tuneable parameters live in [`config.py`](config.py) at the project root. Ev
 | `CHUNK_OVERLAP` | `100` | Overlap between consecutive chunks |
 | `BATCH_LIMIT` | `20` | Max chunks per ChromaDB upsert batch |
 | `DEFAULT_N` | `20` | Default number of results returned by RAG |
-| `VCF_OPS_URL` | *(unset)* | Aria Ops base URL, e.g. `https://vcf-ops.lab.local` |
+| `VCF_OPS_URL` | `https://vcf-ops.lab.local` | Aria Ops base URL |
 | `VCF_OPS_USER` | *(unset)* | Aria Ops username, e.g. `admin@local` |
 | `VCF_OPS_PASS` | *(unset)* | Aria Ops password |
 | `VCF_OPS_AUTH_SOURCE` | *(unset)* | Auth source display name — omit for local accounts; set for LDAP (e.g. `"Imported LDAP Server"`) |
+| `VCF_OPS_VERIFY_SSL` | `false` | Verify Aria Ops TLS certificate — set `true` once a trusted (non-self-signed) cert is in place |
 | `MAX_ALERTS` | `10` | Max alerts to fetch and display per query |
 | `ALERT_CACHE_TTL` | `120` | Seconds before alert results are re-fetched from Aria Ops |
 | `UI_PAGE_TITLE` | `🦅 VCF vArchitect Agent` | Browser tab and page heading |

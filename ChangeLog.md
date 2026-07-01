@@ -2,6 +2,30 @@
 
 ---
 
+## Change Set 55 — Externalise remaining hardcoded config in mcp/server.py
+
+**Date:** 2026-07-01
+**Branch:** `main`
+
+### Problem
+
+`mcp/server.py` hardcoded the Aria Ops default base URL (`https://vcf-ops.lab.local`) and TLS verification (`verify=False`) inline instead of in `config.py`, and duplicated the severity → icon mapping that already existed as `config.UI_SEVERITY_ICON`.
+
+### Fix
+
+#### `config.py`
+
+- Added `VCF_OPS_URL` (env-overridable default base URL for Aria Ops).
+- Added `VCF_OPS_VERIFY_SSL` (env-overridable, defaults to `False` for self-signed lab certs).
+
+#### `mcp/server.py`
+
+- `_acquire_ops_token()` and `get_lab_alerts()` now use `config.VCF_OPS_VERIFY_SSL` instead of a hardcoded `verify=False`.
+- `get_lab_alerts()` reads the default Aria Ops URL from `config.VCF_OPS_URL` instead of a hardcoded string literal.
+- Removed the local `ICONS` dict and reused `config.UI_SEVERITY_ICON`, eliminating a maintenance hazard where the two mappings could drift out of sync.
+
+---
+
 ## Change Set 54 — Persist VCF Ops credentials across page refreshes
 
 **Date:** 2026-06-30

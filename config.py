@@ -52,6 +52,12 @@ MAX_DISTANCE = float(os.getenv("MAX_DISTANCE", "1.0"))
 MAX_ALERTS       = int(os.getenv("MAX_ALERTS",       "10"))   # max alerts to fetch and display
 ALERT_CACHE_TTL  = int(os.getenv("ALERT_CACHE_TTL",  "120"))  # seconds to cache alert results
 
+# --- VCF Operations (Aria Ops) ---
+VCF_OPS_URL        = os.getenv("VCF_OPS_URL", "https://vcf-ops.lab.local")
+# Lab Aria Ops instances typically use a self-signed cert; set to "true" once
+# a real/trusted certificate is in place.
+VCF_OPS_VERIFY_SSL = os.getenv("VCF_OPS_VERIFY_SSL", "false").lower() == "true"
+
 # Words that signal the user is asking about VCF *documentation* (architecture,
 # installation, configuration) rather than live operational data.
 # Deliberately excludes product/component names (sddc, nsx, vsan, cluster…)
